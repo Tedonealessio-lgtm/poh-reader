@@ -1,4 +1,4 @@
-const CACHE = "poh-reader-v2";
+const CACHE = "poh-reader-v0.2-test-test-2";
 
 const CORE_ASSETS = [
   "/",
