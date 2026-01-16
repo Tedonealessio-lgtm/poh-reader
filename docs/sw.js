@@ -1,13 +1,13 @@
 const CACHE = "poh-reader-v0.2-test-test-2";
 
 const CORE_ASSETS = [
-  "/",
-  "/index.html",
-  "/style.css",
-  "/app.js",
-  "/pdf.mjs",
-  "/pdf.worker.min.mjs",
-  "/logo.png"
+  "./",
+  "./index.html",
+  "./style.css",
+  "./app.js",
+  "./pdf.mjs",
+  "./pdf.worker.min.mjs",
+  "./logo.png",
 ];
 
 // INSTALL
