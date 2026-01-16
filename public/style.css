@@ -182,3 +182,90 @@ mark {
     scroll-behavior: auto;
   }
 }
+
+/* Hide native file input */
+.hiddenFile {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+/* Upload button styling (desktop + tablet) */
+.uploadBtn {
+  font-weight: 600;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+/* MOBILE: bottom bar */
+.bottomBar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Hide topbar upload + nav controls on mobile (we use bottom bar) */
+  .topbar .uploadBtn,
+  .topbar .topControls {
+    display: none !important;
+  }
+
+  /* Add space so bottom bar doesn't cover content */
+  body {
+    padding-bottom: 78px;
+  }
+
+  .bottomBar {
+    display: flex;
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    gap: 10px;
+    z-index: 9999;
+
+    padding: 10px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(16, 18, 22, 0.85);
+    backdrop-filter: blur(8px);
+  }
+
+  .bottomBtn {
+    flex: 1;
+    padding: 14px 12px;
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .bottomBtn.primary {
+    flex: 1.2; /* slightly bigger upload */
+  }
+}
+
+/* Make Sections list scroll instead of growing forever */
+.sectionsList {
+  padding-right: 6px;
+}
+
+/* (Optional but recommended) same for search results */
+.searchResults {
+  max-height: 35vh;
+  overflow: auto;
+}
+
+/* Ensure left panel itself does not grow infinitely */
+.panel {
+  max-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sections area must be the scroll container */
+.sectionsList {
+  flex: 1;
+  overflow-y: auto;
+}

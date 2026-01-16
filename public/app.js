@@ -1,7 +1,7 @@
 import * as pdfjsLib from "./pdf.mjs";
 
 // pdf.js worker served from /public (web root)
-pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc = "./pdf.worker.min.mjs";
 
 const $ = (id) => document.getElementById(id);
 
@@ -122,6 +122,7 @@ async function getLastPdfFromLibrary() {
 // UI refs (MATCH YOUR index.html IDs)
 // =====================================================
 const fileInput = $("file");
+const uploadBtn = $("uploadBtn");
 const canvas = $("canvas");
 const ctx = canvas?.getContext("2d");
 
@@ -139,8 +140,8 @@ const feedbackBtn = $("feedbackBtn");
 const feedbackStatus = $("feedbackStatus");
 
 const sectionsBox = $("sections");
+const sectionFilter = $("sectionFilter"); // ✅ this is an <input> (text filter)
 
-const sectionFilter = $("sectionFilter");
 const searchInput = $("search");
 const searchBtn = $("searchBtn");
 const readHitsBtn = $("readHitsBtn");
@@ -167,11 +168,14 @@ let pageNum = 1;
 let pageCount = 0;
 let renderTask = null;
 
+if (window.setEmptyStateVisible) window.setEmptyStateVisible(true);
+
 let currentPdfId = null;
 let currentPdfName = "";
+let restoredOnStartuped = false; // ✅ keep this name (used consistently)
 
 let outlineItems = []; // {title, page, level}
-let sectionRanges = []; // [{title, start, end}]
+let sectionRanges = []; // [{title, start, end, level}]
 let currentSectionIndex = -1;
 
 let pageTextCache = new Map(); // pageIndex (1-based) -> string
@@ -202,7 +206,6 @@ function setPageInfo() {
 }
 
 function enableCoreInputs() {
-  // Ask box should be usable even if no PDF loaded
   if (askInput) askInput.disabled = false;
   if (askBtn) askBtn.disabled = false;
 }
@@ -228,7 +231,6 @@ function isRenderingCancelled(err) {
   return (
     err &&
     (err.name === "RenderingCancelledException" ||
-      String(err.message || err).toLowerCase().includes("rendering cancelled") ||
       String(err.message || err).toLowerCase().includes("rendering cancelled"))
   );
 }
@@ -251,6 +253,20 @@ function escapeHtml(s) {
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+// =====================================================
+// Sections filter (text input -> hides/shows section buttons)
+// =====================================================
+function applySectionsFilter() {
+  if (!sectionsBox) return;
+  const q = (sectionFilter?.value || "").trim().toLowerCase();
+  const btns = sectionsBox.querySelectorAll("button.sectionBtn");
+
+  btns.forEach((btn) => {
+    const text = (btn.textContent || "").toLowerCase();
+    btn.style.display = !q || text.includes(q) ? "" : "none";
+  });
 }
 
 // =====================================================
@@ -319,12 +335,10 @@ async function buildOutlineAndSections() {
   } catch {
     outline = null;
   }
+
   if (!outline || !outline.length) {
     if (sectionsBox) {
       sectionsBox.innerHTML = `<div style="opacity:.7;font-size:12px;">No outline found in this PDF.</div>`;
-    }
-    if (sectionFilter) {
-      sectionFilter.innerHTML = `<option value="ALL">All sections</option>`;
     }
     return;
   }
@@ -390,22 +404,9 @@ async function buildOutlineAndSections() {
 
       sectionsBox.appendChild(btn);
     }
-  }
 
-  // Fill section filter
-  if (sectionFilter) {
-    sectionFilter.innerHTML = "";
-    const optAll = document.createElement("option");
-    optAll.value = "ALL";
-    optAll.textContent = "All sections";
-    sectionFilter.appendChild(optAll);
-
-    sectionRanges.forEach((s, idx) => {
-      const opt = document.createElement("option");
-      opt.value = String(idx);
-      opt.textContent = s.title;
-      sectionFilter.appendChild(opt);
-    });
+    // ✅ apply current text filter to freshly-rendered list
+    applySectionsFilter();
   }
 
   updateCurrentSectionFromPage();
@@ -415,14 +416,6 @@ function updateCurrentSectionFromPage() {
   if (!sectionRanges.length || !pdfDoc) return;
   const idx = sectionRanges.findIndex((s) => pageNum >= s.start && pageNum <= s.end);
   currentSectionIndex = idx;
-  if (sectionFilter) {
-    if (idx >= 0) {
-      // keep dropdown on ALL unless user specifically selects
-      if (sectionFilter.value !== "ALL" && sectionFilter.value !== String(idx)) {
-        // don’t force-change if user is filtering
-      }
-    }
-  }
 }
 
 // =====================================================
@@ -442,17 +435,9 @@ async function runSearch(query) {
   clearSearchUI();
   searchCancelToken.cancel = false;
 
-  const filterVal = sectionFilter?.value || "ALL";
+  // ✅ With sectionFilter as a TEXT INPUT, search just scans the whole PDF
   let startPage = 1;
   let endPage = pageCount;
-
-  if (filterVal !== "ALL") {
-    const idx = Number(filterVal);
-    if (!Number.isNaN(idx) && sectionRanges[idx]) {
-      startPage = sectionRanges[idx].start;
-      endPage = sectionRanges[idx].end;
-    }
-  }
 
   const maxHits = 60;
   const hits = [];
@@ -547,7 +532,6 @@ function refreshVoices() {
     voiceSelect.appendChild(opt);
   }
 
-  // try to keep a sensible default
   const en = voices.find((v) => (v.lang || "").toLowerCase().startsWith("en"));
   if (en) voiceSelect.value = en.name;
 }
@@ -579,13 +563,9 @@ async function readCurrentPage() {
 async function readCurrentSection() {
   if (!pdfDoc) return;
 
-  // pick section by current page, or dropdown if user selected
+  // ✅ sectionFilter is a text input now, so we just use the current section from the page
   let idx = currentSectionIndex;
-  const filterVal = sectionFilter?.value || "ALL";
-  if (filterVal !== "ALL") {
-    const n = Number(filterVal);
-    if (!Number.isNaN(n)) idx = n;
-  }
+
   if (idx < 0 || !sectionRanges[idx]) {
     await readCurrentPage();
     return;
@@ -667,8 +647,6 @@ function setupSpeechRecognition() {
         askInput.focus();
       }
       setMicStatus(`Heard: "${transcript}"`);
-      // Optional: auto-ask
-      // handleAsk();
     } else {
       setMicStatus(`Listening… "${transcript}"`);
     }
@@ -760,6 +738,8 @@ async function loadPdfFromBytes(bytes) {
 
   pdfDoc = await task.promise;
 
+  if (window.setEmptyStateVisible) window.setEmptyStateVisible(false);
+
   pageCount = pdfDoc.numPages;
   pageNum = 1;
 
@@ -804,7 +784,6 @@ async function loadPdfFromFileAndSave(file) {
 
   // clone for DB vs pdf.js
   const bufferForDb = buffer.slice(0);
-  const bytesForPdf = new Uint8Array(buffer.slice(0));
 
   await savePdfToLibrary({
     id: currentPdfId,
@@ -823,6 +802,7 @@ async function loadPdfFromFileAndSave(file) {
   currentPdfName = rec.name || currentPdfName;
 
   await openWithRetries(rec.buffer, { tries: 3, delayMs: 250 });
+  restoredOnStartuped = true;
 }
 
 async function restoreLastPdfOnStartup() {
@@ -834,8 +814,9 @@ async function restoreLastPdfOnStartup() {
     currentPdfName = rec.name || "";
 
     await refreshLibrarySelectUI();
-
     await openWithRetries(rec.buffer, { tries: 3, delayMs: 250 });
+
+    restoredOnStartuped = true; // ✅ important (fixes console issues + empty state)
 
     if (askOutput) {
       askOutput.textContent =
@@ -851,7 +832,6 @@ async function restoreLastPdfOnStartup() {
 // Feedback (where to type)
 // =====================================================
 async function copyFeedbackFlow() {
-  // You type feedback here:
   const typed = prompt(
     "Type your feedback here (it will be copied to clipboard):",
     "What worked? What didn’t? iPad/iPhone? Any confusing buttons?"
@@ -900,7 +880,6 @@ fileInput?.addEventListener("change", async (e) => {
     enableCoreInputs();
     enablePdfDependentControls(false);
     setLibraryStatus("Saving + loading…");
-
     await loadPdfFromFileAndSave(file);
   } catch (err) {
     console.error(err);
@@ -922,6 +901,10 @@ nextBtn?.addEventListener("click", async () => {
   pageNum += 1;
   await renderPage(pageNum);
   updateCurrentSectionFromPage();
+});
+
+uploadBtn?.addEventListener("click", () => {
+  fileInput?.click();
 });
 
 openFromLibraryBtn?.addEventListener("click", async () => {
@@ -955,8 +938,6 @@ deleteFromLibraryBtn?.addEventListener("click", async () => {
   try {
     await deletePdfFromLibrary(id);
     await refreshLibrarySelectUI();
-
-    // If you deleted the currently open PDF, leave it open (rendered), but it won’t be in library anymore.
     setLibraryStatus("Deleted ✅");
   } catch (err) {
     console.error(err);
@@ -978,6 +959,10 @@ clearLibraryBtn?.addEventListener("click", async () => {
 });
 
 feedbackBtn?.addEventListener("click", copyFeedbackFlow);
+
+sectionFilter?.addEventListener("input", () => {
+  applySectionsFilter();
+});
 
 searchBtn?.addEventListener("click", async () => {
   if (!pdfDoc) return;
@@ -1011,7 +996,7 @@ stopReadBtn?.addEventListener("click", () => {
 });
 
 if (micBtn) {
-  micBtn.disabled = false; // enabled if supported; setup will disable if not
+  micBtn.disabled = false;
   micBtn.addEventListener("pointerdown", async (e) => {
     e.preventDefault();
     if (isHolding) return;
@@ -1047,26 +1032,23 @@ if (micBtn) {
 }
 
 window.addEventListener("DOMContentLoaded", async () => {
-  // Ask should always be usable
   enableCoreInputs();
 
-  // Disable PDF dependent stuff until a PDF is loaded/restored
   enablePdfDependentControls(false);
   setPageInfo();
 
-  // Voices can load async
   if ("speechSynthesis" in window) {
     refreshVoices();
     window.speechSynthesis.onvoiceschanged = refreshVoices;
   }
 
-  // Load library dropdown
   await refreshLibrarySelectUI();
-
-  // Restore last PDF if present
   await restoreLastPdfOnStartup();
 
-  // Update mic status
+  if (window.setEmptyStateVisible) {
+    window.setEmptyStateVisible(!restoredOnStartuped);
+  }
+
   setMicStatus("Mic ready. Hold to talk.");
 });
 

@@ -1,216 +1,156 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>POH Reader</title>
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>POH Reader</title>
 
-    <link rel="icon" href="/logo.png" />
-    <link rel="stylesheet" href="./style.css" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <link rel="icon" href="./logo.png" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
 
-    <style>
-      /* --- BRAND HEADER --- */
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
+<body>
+  <!-- ================= TOP BAR (DESKTOP / TABLET) ================= -->
+  <div class="topbar">
+    <div class="brand">
+      <img src="./logo.png" alt="POH Reader" />
+      <span>POH Reader</span>
+    </div>
 
-      .brand img {
-        width: 34px;
-        height: 34px;
-        border-radius: 8px;
-      }
+    <div class="row navControls">
+      <input id="file" type="file" accept="application/pdf" class="hiddenFile" />
+      <button id="uploadBtn" class="uploadBtn">+ Upload POH / OM</button>
 
-      .brand span {
-        font-size: 16px;
-        font-weight: 600;
-        letter-spacing: 0.6px;
-      }
+      <button id="prev">◀ Prev</button>
+      <button id="next">Next ▶</button>
 
-      @media (max-width: 768px) {
-        .brand span {
-          font-size: 15px;
-        }
-      }
+      <span id="pageInfo">Page: – / –</span>
+    </div>
+  </div>
 
-      /* --- MIC BUTTON --- */
-      #micBtn {
-        font-weight: 600;
-        border-radius: 10px;
-        font-size: 14px;
-      }
+  <!-- ================= WELCOME / EMPTY STATE ================= -->
+  <div id="emptyState" class="panel" style="margin:12px;">
+    <h2>POH Reader</h2>
+    <p>
+      Upload your POH / OM once, then quickly search and listen.
+    </p>
+    <ul>
+      <li>Upload your aircraft POH or OM</li>
+      <li>Search limitations and procedures</li>
+      <li>Listen to pages or sections</li>
+    </ul>
+    <p style="opacity:.8;font-size:13px;">
+      Reference tool only — always verify in the official POH / AFM.
+    </p>
+    <button id="emptyGotIt">Got it</button>
+  </div>
 
-      #micBtn:active {
-        transform: scale(0.98);
-      }
-
-      #micStatus {
-        font-size: 12px;
-        opacity: 0.75;
-        margin-top: 6px;
-      }
-
-      /* feedback textarea small and tidy */
-      #feedbackText {
-        width: 100%;
-        height: 80px;
-        margin-top: 8px;
-        resize: vertical;
-      }
-    </style>
-  </head>
-
-  <body>
-    <!-- TOP BAR -->
-    <header class="topbar">
-      <div class="row" style="justify-content: space-between; width: 100%">
-        <!-- BRAND -->
-        <div class="brand">
-          <img src="./logo.png" alt="POH Reader logo" />
-          <span>POH READER</span>
-        </div>
-
-        <!-- CONTROLS -->
-        <div class="row">
-          <input id="file" type="file" accept="application/pdf" />
-          <button id="prev" disabled>◀ Prev</button>
-          <button id="next" disabled>Next ▶</button>
-          <span id="pageInfo">Page: – / –</span>
-        </div>
+  <!-- ================= MAIN LAYOUT ================= -->
+  <main>
+    <!-- LEFT PANEL -->
+    <div class="panel">
+      <h3>Library</h3>
+      <select id="librarySelect"></select>
+      <div class="row">
+        <button id="openFromLibraryBtn">Open</button>
+        <button id="deleteFromLibraryBtn">Delete</button>
+        <button id="clearLibraryBtn">Clear</button>
       </div>
-    </header>
+      <div id="libraryStatus" class="sectionMeta"></div>
 
-    <main class="layout">
-      <!-- LEFT PANEL -->
-      <section class="panel tabSection" data-tab-section="search">
-        <!-- LIBRARY -->
-        <h2>Library</h2>
+      <button id="feedbackBtn">Copy Feedback</button>
+      <div id="feedbackStatus" class="sectionMeta"></div>
 
-        <select id="librarySelect" style="width: 100%; margin: 8px 0">
-          <option value="">(No saved PDFs yet)</option>
-        </select>
+      <hr />
 
-        <div class="row" style="gap: 8px">
-          <button id="openFromLibraryBtn">Open</button>
-          <button id="deleteFromLibraryBtn">Delete</button>
-          <button id="clearLibraryBtn">Clear</button>
-        </div>
+      <h3>Sections</h3>
+      <input id="sectionFilter" type="text" placeholder="Filter sections…" />
+      <div id="sections" class="sectionsList"></div>
 
-        <div class="row" style="gap: 8px; margin-top: 8px; align-items:center;">
-          <button id="feedbackBtn">Copy Feedback</button>
-          <span id="feedbackStatus" style="opacity: 0.8"></span>
-        </div>
+      <hr />
 
-        <!-- ✅ ADD: where you write feedback -->
-        <textarea
-          id="feedbackText"
-          placeholder="Write feedback (device, bug, idea, page number, etc.)"
-        ></textarea>
+      <h3>Search within POH</h3>
+      <input id="search" type="text" placeholder="Search text…" />
+      <button id="searchBtn">Search POH</button>
+      <button id="readHitsBtn" disabled>Read hits</button>
+      <div id="searchResults" class="results"></div>
+    </div>
 
-        <div id="libraryStatus" style="opacity: 0.7; font-size: 12px; margin: 8px 0"></div>
+    <!-- CENTER VIEWER -->
+    <div class="viewer">
+      <canvas id="canvas"></canvas>
+    </div>
 
-        <hr style="margin: 12px 0" />
+    <!-- RIGHT PANEL -->
+    <div class="panel">
+      <h3>Ask & Listen</h3>
+      <textarea
+        id="question"
+        placeholder="Ask a question (local mode)…"
+      ></textarea>
+      <button id="askBtn">Ask</button>
 
-        <h2>Sections</h2>
-        <div id="sections" class="results"></div>
+      <div class="row" style="margin-top:8px;">
+        <button id="micBtn">🎤 Hold to talk</button>
+      </div>
+      <div id="micStatus" class="sectionMeta"></div>
 
-        <h2 style="margin-top: 12px">Search</h2>
+      <hr />
 
-        <div class="row">
-          <select id="sectionFilter" disabled>
-            <option value="ALL">All sections</option>
-          </select>
-        </div>
+      <button id="readPageBtn">Read page</button>
+      <button id="readSectionBtn">Read section</button>
+      <button id="stopReadBtn">Stop</button>
 
-        <div class="row">
-          <input
-            id="search"
-            type="text"
-            placeholder="Search (e.g. ITT takeoff limit)"
-            disabled
-          />
-          <button id="searchBtn" disabled>Search</button>
-        </div>
+      <label>Speed</label>
+      <input id="ttsRate" type="range" min="0.6" max="1.4" step="0.1" value="1" />
 
-        <div class="row">
-          <button id="readHitsBtn" disabled>🎯 Read search hits</button>
-        </div>
+      <select id="voiceSelect"></select>
 
-        <div id="searchResults" class="results"></div>
-      </section>
+      <div id="answer" class="answer"></div>
+    </div>
+  </main>
 
-      <!-- CENTER VIEWER -->
-      <section class="viewer tabSection" data-tab-section="viewer">
-        <canvas id="canvas"></canvas>
-      </section>
+  <!-- ================= MOBILE BOTTOM BAR ================= -->
+  <div class="bottomBar">
+    <button id="bottomPrev" class="bottomBtn">◀</button>
+    <button id="bottomUpload" class="bottomBtn primary">Upload</button>
+    <button id="bottomSearch" class="bottomBtn">Search</button>
+    <button id="bottomNext" class="bottomBtn">▶</button>
+  </div>
 
-      <!-- RIGHT PANEL -->
-      <section class="panel tabSection" data-tab-section="ask">
-        <h2>Ask & Listen</h2>
+  <!-- ================= SCRIPTS ================= -->
+  <script type="module" src="./app.js"></script>
 
-        <textarea
-          id="question"
-          rows="6"
-          placeholder="Ask a question (e.g. ITT limit during takeoff)…"
-          disabled
-        ></textarea>
+  <script>
+    // Empty state helper
+    window.setEmptyStateVisible = function (visible) {
+      const el = document.getElementById("emptyState");
+      if (!el) return;
+      el.style.display = visible ? "block" : "none";
+    };
 
-        <!-- VOICE ASK CONTROLS -->
-        <div class="row" style="margin-top: 8px; gap: 8px">
-          <button id="micBtn" disabled style="flex: 1">🎙 Hold to talk</button>
-          <button id="askBtn" disabled>❓ Ask</button>
-        </div>
+    document.getElementById("emptyGotIt")?.addEventListener("click", () => {
+      window.setEmptyStateVisible(false);
+    });
 
-        <div id="micStatus">Mic ready.</div>
+    // Wire bottom bar to top controls
+    (function () {
+      const byId = (id) => document.getElementById(id);
 
-        <div id="answer" class="answer"></div>
+      const topUpload = byId("uploadBtn");
+      const topPrev = byId("prev");
+      const topNext = byId("next");
+      const topSearch = byId("searchBtn");
 
-        <h3 style="margin-top: 14px">Voice Read</h3>
-
-        <div class="row">
-          <button id="readPageBtn" disabled>🔊 Read page</button>
-          <button id="readSectionBtn" disabled>📖 Read section</button>
-          <button id="stopReadBtn" disabled>⏹ Stop</button>
-        </div>
-
-        <div class="row" style="margin-top: 8px">
-          <label style="font-size: 12px; opacity: 0.7">Speed</label>
-          <input
-            id="ttsRate"
-            type="range"
-            min="0.7"
-            max="1.4"
-            step="0.1"
-            value="1.0"
-            disabled
-          />
-        </div>
-
-        <div class="row" style="margin-top: 8px">
-          <label style="font-size: 12px; opacity: 0.7">Voice</label>
-          <select id="voiceSelect" disabled style="flex: 1"></select>
-        </div>
-
-        <div style="margin-top: 14px; font-size: 11px; opacity: 0.7; line-height: 1.4">
-          ⚠️ <b>Reference tool only.</b><br />
-          Does not replace the official POH / AFM.<br />
-          Always verify limitations and procedures before flight.
-        </div>
-      </section>
-    </main>
-
-    <script type="module" src="./app.js"></script>
-
-    <script>
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker
-            .register("/sw.js")
-            .then((reg) => console.log("✅ SW registered:", reg.scope))
-            .catch((err) => console.error("❌ SW registration failed:", err));
-        });
-      }
-    </script>
-  </body>
+      byId("bottomUpload")?.addEventListener("click", () => topUpload?.click());
+      byId("bottomPrev")?.addEventListener("click", () => topPrev?.click());
+      byId("bottomNext")?.addEventListener("click", () => topNext?.click());
+      byId("bottomSearch")?.addEventListener("click", () => topSearch?.click());
+    })();
+  </script>
+</body>
 </html>
