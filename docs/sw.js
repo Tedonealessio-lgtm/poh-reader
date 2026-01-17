@@ -1,13 +1,16 @@
-const CACHE = "poh-reader-v0.2-test-test-2";
+const CACHE = "poh-reader-v0.2-test-TEST-3";
+
+const BASE = self.registration.scope;
 
 const CORE_ASSETS = [
-  "./",
-  "./index.html",
-  "./style.css",
-  "./app.js",
-  "./pdf.mjs",
-  "./pdf.worker.min.mjs",
-  "./logo.png",
+  BASE,
+  BASE + "index.html",
+  BASE + "style.css",
+  BASE + "app.js",
+  BASE + "pdf.mjs",
+  BASE + "pdf.worker.min.mjs",
+  BASE + "logo.png",
+  BASE + "apple-touch-icon.png",
 ];
 
 // INSTALL
