@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>POH Reader</title>
+
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <link rel="icon" href="./logo.png" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+
+<body>
+  <!-- ================= TOP BAR (DESKTOP / TABLET) ================= -->
+  <div class="topbar">
+    <div class="brand">
+      <img src="./logo.png" alt="POH Reader" />
+      <span>POH Reader</span>
+    </div>
+
+    <div class="row navControls">
+      <input id="file" type="file" accept="application/pdf" class="hiddenFile" />
+      <button id="uploadBtn" class="uploadBtn">+ Upload POH / OM</button>
+
+      <button id="prev">◀ Prev</button>
+      <button id="next">Next ▶</button>
+
+      <span id="pageInfo">Page: – / –</span>
+    </div>
+  </div>
+
+  <!-- ================= WELCOME / EMPTY STATE ================= -->
+  <div id="emptyState" class="panel" style="margin:12px;">
+    <h2>POH Reader</h2>
+    <p>
+      Upload your POH / OM once, then quickly search and listen.
+    </p>
+    <ul>
+      <li>Upload your aircraft POH or OM</li>
+      <li>Search limitations and procedures</li>
+      <li>Listen to pages or sections</li>
+    </ul>
+    <p style="opacity:.8;font-size:13px;">
+      Reference tool only — always verify in the official POH / AFM.
+    </p>
+    <button id="emptyGotIt">Got it</button>
+  </div>
+
+  <!-- ================= MAIN LAYOUT ================= -->
+  <main>
+    <!-- LEFT PANEL -->
+    <div class="panel">
+      <h3>Library</h3>
+      <select id="librarySelect"></select>
+      <div class="row">
+        <button id="openFromLibraryBtn">Open</button>
+        <button id="deleteFromLibraryBtn">Delete</button>
+        <button id="clearLibraryBtn">Clear</button>
+      </div>
+      <div id="libraryStatus" class="sectionMeta"></div>
+
+      <button id="feedbackBtn">Copy Feedback</button>
+      <div id="feedbackStatus" class="sectionMeta"></div>
+
+      <hr />
+
+      <h3>Sections</h3>
+      <input id="sectionFilter" type="text" placeholder="Filter sections…" />
+      <div id="sections" class="sectionsList"></div>
+
+      <hr />
+
+      <h3>Search within POH</h3>
+      <input id="search" type="text" placeholder="Search text…" />
+      <button id="searchBtn">Search POH</button>
+      <button id="readHitsBtn" disabled>Read hits</button>
+      <div id="searchResults" class="results"></div>
+    </div>
+
+    <!-- CENTER VIEWER -->
+    <div class="viewer">
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel">
+      <h3>Ask & Listen</h3>
+      <textarea
+        id="question"
+        placeholder="Ask a question (local mode)…"
+      ></textarea>
+      <button id="askBtn">Ask</button>
+
+      <div class="row" style="margin-top:8px;">
+        <button id="micBtn">🎤 Hold to talk</button>
+      </div>
+      <div id="micStatus" class="sectionMeta"></div>
+
+      <hr />
+
+      <button id="readPageBtn">Read page</button>
+      <button id="readSectionBtn">Read section</button>
+      <button id="stopReadBtn">Stop</button>
+
+      <label>Speed</label>
+      <input id="ttsRate" type="range" min="0.6" max="1.4" step="0.1" value="1" />
+
+      <select id="voiceSelect"></select>
+
+      <div id="answer" class="answer"></div>
+    </div>
+  </main>
+
+  <!-- ================= MOBILE BOTTOM BAR ================= -->
+  <div class="bottomBar">
+    <button id="bottomPrev" class="bottomBtn">◀</button>
+    <button id="bottomUpload" class="bottomBtn primary">Upload</button>
+    <button id="bottomSearch" class="bottomBtn">Search</button>
+    <button id="bottomNext" class="bottomBtn">▶</button>
+  </div>
+
+  <!-- ================= SCRIPTS ================= -->
+  <script type="module" src="./app.js"></script>
+
+  <script>
+    // Empty state helper
+    window.setEmptyStateVisible = function (visible) {
+      const el = document.getElementById("emptyState");
+      if (!el) return;
+      el.style.display = visible ? "block" : "none";
+    };
+
+    document.getElementById("emptyGotIt")?.addEventListener("click", () => {
+      window.setEmptyStateVisible(false);
+    });
+
+    // Wire bottom bar to top controls
+    (function () {
+      const byId = (id) => document.getElementById(id);
+
+      const topUpload = byId("uploadBtn");
+      const topPrev = byId("prev");
+      const topNext = byId("next");
+      const topSearch = byId("searchBtn");
+
+      byId("bottomUpload")?.addEventListener("click", () => topUpload?.click());
+      byId("bottomPrev")?.addEventListener("click", () => topPrev?.click());
+      byId("bottomNext")?.addEventListener("click", () => topNext?.click());
+      byId("bottomSearch")?.addEventListener("click", () => topSearch?.click());
+    })();
+  </script>
+</body>
+</html>
