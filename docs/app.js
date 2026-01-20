@@ -647,6 +647,8 @@ function stopTts({ keepProgress = true } = {}) {
   } catch {}
   ttsSpeaking = false;
   if (!keepProgress) lastReadProgress = null;
+
+  enablePdfDependentControls(!!pdfDoc);
 }
 
 function makeTextKey(text) {
