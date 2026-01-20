@@ -1,21 +1,20 @@
-const CACHE = "poh-reader-v3";
+// GitHub Pages-safe Service Worker (scope-aware)
+const CACHE = "poh-reader-v3-1"; // bump this whenever you deploy changes
 
-// Derive the base path from the service worker scope (GitHub Pages friendly)
-const SCOPE = self.registration.scope;                 // e.g. https://.../poh-reader/
-const BASE = new URL(SCOPE).pathname;                  // e.g. /poh-reader/
-const atBase = (p) => new URL(p.replace(/^\//, ""), SCOPE).toString();
+// Scope base, e.g. "https://.../poh-reader/"  -> BASE = "/poh-reader/"
+const BASE = new URL(self.registration.scope).pathname;
 
 const CORE_ASSETS = [
-  atBase(""),                 // BASE (acts like "/poh-reader/")
-  atBase("index.html"),
-  atBase("style.css"),
-  atBase("app.js"),
-  atBase("pdf.mjs"),
-  atBase("pdf.worker.min.mjs"),
-  atBase("logo.png"),
-  atBase("manifest.webmanifest"),
-  atBase("apple-touch-icon.png"),
-  // add any other icons you actually ship
+  BASE,
+  BASE + "index.html",
+  BASE + "style.css",
+  BASE + "app.js",
+  BASE + "pdf.mjs",
+  BASE + "pdf.worker.min.mjs",
+  BASE + "logo.png",
+  BASE + "apple-touch-icon.png",
+  BASE + "apple-touch-icon-v2.png",
+  BASE + "standard_fonts/" // optional (directory requests won't pre-cache, but harmless)
 ];
 
 // INSTALL
@@ -41,29 +40,16 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
 
-  // Offline navigation fallback (critical for reopening the PWA offline)
+  // Always serve app shell for navigations (important for iOS offline reload)
   if (req.mode === "navigate") {
     event.respondWith(
-      caches.match(atBase("index.html")).then((cached) => cached || fetch(req))
+      caches.match(BASE + "index.html").then((cached) => cached || fetch(req))
     );
     return;
   }
 
   // Cache-first for static assets
   event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req).then((res) => {
-        // Optionally cache fetched same-origin assets
-        try {
-          const url = new URL(req.url);
-          if (url.origin === location.origin) {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(req, copy));
-          }
-        } catch (_) {}
-        return res;
-      });
-    })
+    caches.match(req).then((cached) => cached || fetch(req))
   );
 });
