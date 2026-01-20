@@ -128,6 +128,7 @@ const ctx = canvas?.getContext("2d");
 
 const prevBtn = $("prev");
 const nextBtn = $("next");
+const resumeReadBtn = $("resumeReadBtn");
 const pageInfo = $("pageInfo");
 
 const librarySelect = $("librarySelect");
@@ -230,6 +231,8 @@ function enablePdfDependentControls(enabled) {
   if (voiceSelect) voiceSelect.disabled = !enabled;
 
   if (readHitsBtn) readHitsBtn.disabled = !enabled || lastSearchHits.length === 0;
+
+  if (resumeReadBtn) resumeReadBtn.disabled = !enabled || !lastReadProgress;
 }
 
 function isRenderingCancelled(err) {
@@ -1391,6 +1394,11 @@ readSectionBtn?.addEventListener("click", async () => {
 
 stopReadBtn?.addEventListener("click", () => {
   stopTts({ keepProgress: true }); // keep resume progress
+});
+
+resumeReadBtn?.addEventListener("click", async () => {
+  if (!pdfDoc || !lastReadProgress) return;
+  await resumeTts();
 });
 
 if (micBtn) {
