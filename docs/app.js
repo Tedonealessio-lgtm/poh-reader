@@ -738,10 +738,21 @@ if (voiceMode === "manual") {
     u.rate = Number.isFinite(rate) ? rate : 1.0;
 
     u.onend = () => {
-      // advance offset
-      lastReadProgress.offset += chunk.length;
-      speakNext();
-    };
+  // iOS Safari: cancel() still fires onend
+  if (ttsWasCancelled) {
+    ttsWasCancelled = false;
+
+    // If stop was pressed, keep progress
+    if (!ttsKeepProgressOnCancel) {
+      lastReadProgress = null;
+    }
+    return;
+  }
+
+  // normal end → advance offset
+  lastReadProgress.offset += chunk.length;
+  speakNext();
+};
 
     u.onerror = () => {
       ttsSpeaking = false;
@@ -1408,7 +1419,14 @@ readSectionBtn?.addEventListener("click", async () => {
 
 stopReadBtn.addEventListener("click", () => {
   stopTts({ keepProgress: true }); // keep resume progress
-setTimeout(() => enableResumeButton(!!lastReadProgress), 0);
+
+  // iOS Safari: cancel() can still trigger onend afterwards,
+  // so update the Resume button state on the next tick.
+  setTimeout(() => {
+    if (resumeReadBtn) {
+      resumeReadBtn.disabled = !lastReadProgress;
+    }
+  }, 0);
 });
 
 resumeReadBtn?.addEventListener("click", async () => {
