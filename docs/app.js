@@ -192,6 +192,10 @@ let ttsSpeaking = false;
 // For resume (chunked)
 let lastReadProgress = null; // { page, key, offset, label }
 
+// Stop/cancel tracking (so Stop keeps progress)
+let ttsWasCancelled = false;
+let ttsKeepProgressOnCancel = false;
+
 // =====================================================
 // Helpers / UI
 // =====================================================
@@ -642,10 +646,18 @@ if (best) voiceSelect.value = best.name;
 
 // stop speech; keepProgress=true allows next "Read" to resume
 function stopTts({ keepProgress = true } = {}) {
+  // iOS Safari: cancel() triggers onend afterwards.
+  // Mark as cancelled so onend won't wipe resume progress.
+  ttsWasCancelled = true;
+  ttsKeepProgressOnCancel = keepProgress;
+
   try {
     window.speechSynthesis.cancel();
   } catch {}
+
   ttsSpeaking = false;
+  console.log("STOP pressed - lastReadProgress =", lastReadProgress);
+
   if (!keepProgress) lastReadProgress = null;
 
   enablePdfDependentControls(!!pdfDoc);
@@ -1394,8 +1406,9 @@ readSectionBtn?.addEventListener("click", async () => {
   await readCurrentSection();
 });
 
-stopReadBtn?.addEventListener("click", () => {
+stopReadBtn.addEventListener("click", () => {
   stopTts({ keepProgress: true }); // keep resume progress
+setTimeout(() => enableResumeButton(!!lastReadProgress), 0);
 });
 
 resumeReadBtn?.addEventListener("click", async () => {
