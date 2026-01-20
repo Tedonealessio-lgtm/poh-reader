@@ -1,6 +1,6 @@
 import * as pdfjsLib from "./pdf.mjs";
 
-// pdf.js worker served from /public (web root)
+// pdf.js worker served from /docs (GitHub Pages root)
 pdfjsLib.GlobalWorkerOptions.workerSrc = "./pdf.worker.min.mjs";
 
 const $ = (id) => document.getElementById(id);
@@ -140,7 +140,7 @@ const feedbackBtn = $("feedbackBtn");
 const feedbackStatus = $("feedbackStatus");
 
 const sectionsBox = $("sections");
-const sectionFilter = $("sectionFilter"); // ✅ this is an <input> (text filter)
+const sectionFilter = $("sectionFilter"); // <input> filter
 
 const searchInput = $("search");
 const searchBtn = $("searchBtn");
@@ -172,19 +172,24 @@ if (window.setEmptyStateVisible) window.setEmptyStateVisible(true);
 
 let currentPdfId = null;
 let currentPdfName = "";
-let restoredOnStartuped = false; // ✅ keep this name (used consistently)
+let restoredOnStartuped = false; // keep this name
 
 let outlineItems = []; // {title, page, level}
 let sectionRanges = []; // [{title, start, end, level}]
 let currentSectionIndex = -1;
 
-let pageTextCache = new Map(); // pageIndex (1-based) -> string
+let pageTextCache = new Map(); // raw text cache (search)
+let pageTtsCache = new Map(); // cleaned text cache (audio)
+
 let lastSearchHits = []; // [{page, text, context}]
 let searchCancelToken = { cancel: false };
 
 // TTS
 let voices = [];
 let ttsSpeaking = false;
+
+// For resume (chunked)
+let lastReadProgress = null; // { page, key, offset, label }
 
 // =====================================================
 // Helpers / UI
@@ -256,7 +261,7 @@ function sleep(ms) {
 }
 
 // =====================================================
-// Sections filter (text input -> hides/shows section buttons)
+// Sections filter
 // =====================================================
 function applySectionsFilter() {
   if (!sectionsBox) return;
@@ -301,7 +306,7 @@ async function goToPage(p) {
 }
 
 // =====================================================
-// Text extraction (for search + TTS)
+// Text extraction (raw for search)
 // =====================================================
 async function getPageText(pageNumber1Based) {
   if (!pdfDoc) return "";
@@ -317,6 +322,49 @@ async function getPageText(pageNumber1Based) {
 
   pageTextCache.set(pageNumber1Based, text);
   return text;
+}
+
+// =====================================================
+// TTS cleaning (Pilatus-friendly)
+// =====================================================
+function cleanTtsText(text) {
+  if (!text) return "";
+
+  let t = String(text);
+
+  // Normalize spaces
+  t = t.replace(/\s+/g, " ").trim();
+
+  // Remove common boilerplate patterns (Pilatus PC-12 footer style)
+  const patterns = [
+    /\bissued\b\s*[:\-]?\s*[a-z]{3,9}\s+\d{1,2},\s+\d{4}/gi,              // Issued: September 15, 2006
+    /\brevision\b\s*\d+\s*[:\-]?\s*[a-z]{3,9}\s+\d{1,2},\s+\d{4}/gi,      // Revision 15: Nov 06, 2015
+    /\brevision\b\s*[:\-]?\s*\d{1,3}/gi,                                  // Revision: 15
+    /\brev\.?\b\s*[:\-]?\s*\d{1,3}/gi,                                    // Rev. 15
+    /\breport\s*(no|number)\b\s*[:\-]?\s*[0-9a-z\-/. ]{1,20}/gi,          // Report No: 02277
+    /\bdoc(ument)?\s*(no|number)\b\s*[:\-]?\s*[0-9a-z\-/. ]{1,25}/gi,     // Document No: ...
+    /\beffective\s*date\b\s*[:\-]?\s*[0-9a-z.,/ ]{1,25}/gi,               // Effective Date ...
+    /\bprint(ed)?\s*date\b\s*[:\-]?\s*[0-9a-z.,/ ]{1,25}/gi,              // Printed Date ...
+
+    // Page markers
+    /\bpage\s+\d+\s*(of\s+\d+)?\b/gi,                                     // Page 1 of 5
+    /\b\d{1,4}\s*[-–]\s*\d{1,4}\b/g,                                      // 1-5
+  ];
+
+  for (const rx of patterns) t = t.replace(rx, " ");
+
+  return t.replace(/\s{2,}/g, " ").trim();
+}
+
+async function getPageTextForTts(pageNumber1Based) {
+  if (!pdfDoc) return "";
+  if (pageTtsCache.has(pageNumber1Based)) return pageTtsCache.get(pageNumber1Based);
+
+  const raw = await getPageText(pageNumber1Based);
+  const cleaned = cleanTtsText(raw);
+
+  pageTtsCache.set(pageNumber1Based, cleaned);
+  return cleaned;
 }
 
 // =====================================================
@@ -405,7 +453,6 @@ async function buildOutlineAndSections() {
       sectionsBox.appendChild(btn);
     }
 
-    // ✅ apply current text filter to freshly-rendered list
     applySectionsFilter();
   }
 
@@ -416,6 +463,12 @@ function updateCurrentSectionFromPage() {
   if (!sectionRanges.length || !pdfDoc) return;
   const idx = sectionRanges.findIndex((s) => pageNum >= s.start && pageNum <= s.end);
   currentSectionIndex = idx;
+}
+
+function getSectionForPage(p) {
+  if (!sectionRanges?.length) return "";
+  const s = sectionRanges.find((x) => p >= x.start && p <= x.end);
+  return s?.title || "";
 }
 
 // =====================================================
@@ -435,9 +488,8 @@ async function runSearch(query) {
   clearSearchUI();
   searchCancelToken.cancel = false;
 
-  // ✅ With sectionFilter as a TEXT INPUT, search just scans the whole PDF
-  let startPage = 1;
-  let endPage = pageCount;
+  const startPage = 1;
+  const endPage = pageCount;
 
   const maxHits = 60;
   const hits = [];
@@ -446,7 +498,6 @@ async function runSearch(query) {
     searchResults.innerHTML = `<div style="opacity:.7;font-size:12px;">Searching pages ${startPage}–${endPage}…</div>`;
   }
 
-  // async scan (yields so UI doesn’t freeze)
   for (let p = startPage; p <= endPage; p++) {
     if (searchCancelToken.cancel) break;
 
@@ -462,7 +513,7 @@ async function runSearch(query) {
       }
     }
 
-    if (p % 8 === 0) {
+    if (p % 10 === 0) {
       if (searchResults) {
         searchResults.innerHTML = `<div style="opacity:.7;font-size:12px;">Searching… page ${p}/${endPage}</div>`;
       }
@@ -480,7 +531,6 @@ async function runSearch(query) {
     return;
   }
 
-  // Render hits
   const wrap = document.createElement("div");
   for (const h of hits) {
     const item = document.createElement("div");
@@ -506,13 +556,62 @@ async function runSearch(query) {
 }
 
 // =====================================================
-// TTS (Voice Read)
+// TTS (Voice Read) + REAL RESUME (chunked)
 // =====================================================
-function stopTts() {
-  try {
-    window.speechSynthesis.cancel();
-  } catch {}
-  ttsSpeaking = false;
+// =====================================================
+// Voice mode + language detection (conservative)
+// =====================================================
+let voiceMode = "english"; // "english" | "auto" | "manual"
+// Recommendation: keep "english" as default because POHs are English.
+
+function detectLangFast(text) {
+  const t = (text || "").toLowerCase();
+
+  // Strong German signals
+  const umlauts = (t.match(/[äöüß]/g) || []).length;
+  if (umlauts >= 3) return "de";
+
+  // Token-based hints (conservative)
+  const words = t.split(/\s+/).filter(Boolean);
+  const sample = words.slice(0, 250);
+  if (sample.length < 40) return "en"; // too short -> don’t flip
+
+  const germanSet = new Set([
+    "und","der","die","das","nicht","mit","für","ist","sind","ein","eine",
+    "bei","auf","zum","zur","im","am","aus","wird","werden"
+  ]);
+
+  const englishSet = new Set([
+    "the","and","of","to","in","for","is","are","with","on","as","be","by",
+    "this","that","from"
+  ]);
+
+  let de = 0, en = 0;
+  for (const w of sample) {
+    if (germanSet.has(w)) de++;
+    if (englishSet.has(w)) en++;
+  }
+
+  // Switch to German ONLY if clearly German (won’t trigger on POHs)
+  if (de >= 6 && de >= en * 2) return "de";
+
+  return "en";
+}
+
+function pickBestVoiceForLang(lang) {
+  const l = (lang || "en").toLowerCase();
+  const candidates = voices.filter(v => (v.lang || "").toLowerCase().startsWith(l));
+  const pool = candidates.length ? candidates : voices;
+
+  const prefer = (rx) => pool.find(v => rx.test((v.name || "").toLowerCase()));
+
+  // Warmest first
+  return (
+    prefer(/siri/) ||
+    prefer(/enhanced|premium|neural|natural/) ||
+    pool[0] ||
+    null
+  );
 }
 
 function getSelectedVoice() {
@@ -532,40 +631,128 @@ function refreshVoices() {
     voiceSelect.appendChild(opt);
   }
 
-  const en = voices.find((v) => (v.lang || "").toLowerCase().startsWith("en"));
-  if (en) voiceSelect.value = en.name;
+  // Pick the most human-sounding voice we can find (English)
+const best = pickBestVoiceForLang("en");
+if (best) voiceSelect.value = best.name;
+
 }
 
-async function speakText(text) {
-  stopTts();
-  if (!text) return;
+// stop speech; keepProgress=true allows next "Read" to resume
+function stopTts({ keepProgress = true } = {}) {
+  try {
+    window.speechSynthesis.cancel();
+  } catch {}
+  ttsSpeaking = false;
+  if (!keepProgress) lastReadProgress = null;
+}
 
-  const u = new SpeechSynthesisUtterance(text);
-  const v = getSelectedVoice();
-  if (v) u.voice = v;
+function makeTextKey(text) {
+  const s = String(text || "");
+  return `${s.length}:${s.slice(0, 40)}:${s.slice(-40)}`;
+}
 
-  const rate = Number(ttsRate?.value || 1.0);
-  u.rate = Number.isFinite(rate) ? rate : 1.0;
+function chunkText(text, maxLen = 220) {
+  const s = String(text || "").trim();
+  if (!s) return [];
+
+  const chunks = [];
+  let i = 0;
+
+  while (i < s.length) {
+    let end = Math.min(i + maxLen, s.length);
+
+    // try not to cut in the middle of a word
+    if (end < s.length) {
+      const lastSpace = s.lastIndexOf(" ", end);
+      if (lastSpace > i + 80) end = lastSpace;
+    }
+
+    chunks.push(s.slice(i, end).trim());
+    i = end;
+  }
+
+  return chunks.filter(Boolean);
+}
+
+async function speakChunked(text, { page, label } = {}, { resume = false } = {}) {
+  stopTts({ keepProgress: true });
+
+  const cleaned = String(text || "").trim();
+  if (!cleaned) return;
+
+  const key = makeTextKey(cleaned);
+
+  let offset = 0;
+  if (resume && lastReadProgress && lastReadProgress.page === page && lastReadProgress.key === key) {
+    offset = Math.max(0, lastReadProgress.offset || 0);
+  }
+
+  const remaining = cleaned.slice(offset);
+  const chunks = chunkText(remaining, 220);
+  if (!chunks.length) return;
 
   ttsSpeaking = true;
-  u.onend = () => (ttsSpeaking = false);
-  u.onerror = () => (ttsSpeaking = false);
+  lastReadProgress = { page, key, offset, label };
 
-  window.speechSynthesis.speak(u);
+  let v = null;
+
+if (voiceMode === "manual") {
+  v = getSelectedVoice();
+} else if (voiceMode === "english") {
+  v = pickBestVoiceForLang("en");
+} else {
+  // auto (conservative)
+  const lang = detectLangFast(cleaned);
+  v = pickBestVoiceForLang(lang === "de" ? "de" : "en");
+}
+
+  const rate = Number(ttsRate?.value || 1.0);
+
+  const speakNext = () => {
+    if (!chunks.length) {
+      ttsSpeaking = false;
+      return;
+    }
+
+    const chunk = chunks.shift();
+
+    const u = new SpeechSynthesisUtterance(chunk);
+    if (v) u.voice = v;
+    u.rate = Number.isFinite(rate) ? rate : 1.0;
+
+    u.onend = () => {
+      // advance offset
+      lastReadProgress.offset += chunk.length;
+      speakNext();
+    };
+
+    u.onerror = () => {
+      ttsSpeaking = false;
+    };
+
+    window.speechSynthesis.speak(u);
+  };
+
+  speakNext();
 }
 
 async function readCurrentPage() {
   if (!pdfDoc) return;
-  const text = await getPageText(pageNum);
-  await speakText(text || "No readable text found on this page.");
+  const text = await getPageTextForTts(pageNum);
+
+  const canResume =
+    lastReadProgress &&
+    lastReadProgress.page === pageNum &&
+    lastReadProgress.key === makeTextKey(text) &&
+    (lastReadProgress.offset || 0) > 0;
+
+  await speakChunked(text || "No readable text found on this page.", { page: pageNum, label: "page" }, { resume: !!canResume });
 }
 
 async function readCurrentSection() {
   if (!pdfDoc) return;
 
-  // ✅ sectionFilter is a text input now, so we just use the current section from the page
   let idx = currentSectionIndex;
-
   if (idx < 0 || !sectionRanges[idx]) {
     await readCurrentPage();
     return;
@@ -573,31 +760,39 @@ async function readCurrentSection() {
 
   const s = sectionRanges[idx];
 
-  // Safety: don’t read 200 pages in one go
+  // Safety cap for section reading
   const maxPages = 6;
   const end = Math.min(s.end, s.start + maxPages - 1);
 
   let combined = `Section: ${s.title}. Pages ${s.start} to ${end}. `;
   for (let p = s.start; p <= end; p++) {
-    const t = await getPageText(p);
+    const t = await getPageTextForTts(p);
     if (t) combined += " " + t;
     await sleep(0);
   }
 
-  await speakText(combined.trim());
+  await speakChunked(combined.trim(), { page: s.start, label: "section" }, { resume: false });
 }
 
 async function readSearchHits() {
   if (!lastSearchHits.length) return;
 
-  let combined = `Reading ${Math.min(lastSearchHits.length, 12)} search hits. `;
-  const limit = Math.min(lastSearchHits.length, 12);
+  let combined = `Reading ${Math.min(lastSearchHits.length, 10)} search hits. `;
+  const limit = Math.min(lastSearchHits.length, 10);
   for (let i = 0; i < limit; i++) {
     const h = lastSearchHits[i];
-    combined += ` Hit ${i + 1}, page ${h.page}. ${h.context}. `;
+    combined += ` Hit ${i + 1}, page ${h.page}. ${cleanTtsText(h.context)}. `;
   }
-  await speakText(combined.trim());
+
+  await speakChunked(combined.trim(), { page: lastSearchHits[0].page, label: "hits" }, { resume: false });
 }
+
+// Hint user when returning from background
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && lastReadProgress?.page) {
+    setLibraryStatus(`Audio paused. Press Read again to resume (page ${lastReadProgress.page}).`);
+  }
+});
 
 // =====================================================
 // Mic (Hold-to-talk)
@@ -670,21 +865,221 @@ function stopListening() {
 }
 
 // =====================================================
-// "Ask" (Local mode placeholder)
+// "Ask" (Local mode) — FAST on 1300+ pages (incremental scan)
 // =====================================================
-function handleAsk() {
+const STOPWORDS = new Set([
+  "the","a","an","and","or","to","of","in","on","for","with","at","from","by",
+  "is","are","was","were","be","been","it","this","that","these","those","as",
+  "i","you","we","they","my","your","our","their","me","us","them",
+  "what","where","when","why","how","which","who","can","could","should","would",
+  "do","does","did"
+]);
+
+function tokenizeQuestion(q) {
+  return (q || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .filter((t) => !STOPWORDS.has(t))
+    .slice(0, 10);
+}
+
+function makeExcerpt(text, hitIndex, hitLen, windowSize = 140) {
+  if (!text) return "";
+  const left = Math.max(0, hitIndex - windowSize);
+  const right = Math.min(text.length, hitIndex + hitLen + windowSize);
+  return text.slice(left, right).trim();
+}
+
+function countTokenHits(textLower, tokens) {
+  let score = 0;
+  for (const t of tokens) {
+    let idx = 0;
+    while (true) {
+      idx = textLower.indexOf(t, idx);
+      if (idx < 0) break;
+      score += 1;
+      idx += t.length;
+      if (score > 200) break;
+    }
+    if (score > 200) break;
+  }
+  return score;
+}
+
+let askScanState = null;
+// { qKey, nextPage, results: [], titleScores: Map }
+
+async function runLocalAskIncremental(question, { timeBudgetMs = 1200, maxReturn = 7 } = {}) {
+  if (!pdfDoc) return { hits: [], done: true };
+
+  const tokens = tokenizeQuestion(question);
+  if (!tokens.length) return { hits: [], done: true };
+
+  const qKey = tokens.join("|");
+
+  // Reset scan if new question
+  if (!askScanState || askScanState.qKey !== qKey) {
+    const titleScores = new Map();
+    for (const s of (sectionRanges || [])) {
+      const tl = (s.title || "").toLowerCase();
+      let score = 0;
+      for (const t of tokens) if (tl.includes(t)) score += 6;
+      if (score > 0) titleScores.set(s.start, (titleScores.get(s.start) || 0) + score);
+    }
+
+    askScanState = {
+      qKey,
+      nextPage: 1,
+      results: [],
+      titleScores,
+    };
+
+    // Add title-only results immediately
+    for (const [p, s] of titleScores.entries()) {
+      askScanState.results.push({
+        page: p,
+        score: s,
+        excerpt: "",
+        sectionTitle: getSectionForPage(p),
+      });
+    }
+  }
+
+  const start = performance.now();
+  const endPage = pageCount;
+
+  while (askScanState.nextPage <= endPage) {
+    const p = askScanState.nextPage++;
+
+    const text = await getPageText(p); // raw for matching
+    if (text) {
+      const tl = text.toLowerCase();
+      const tokenScore = countTokenHits(tl, tokens);
+      const titleBoost = askScanState.titleScores.get(p) || 0;
+
+      if (tokenScore > 0 || titleBoost > 0) {
+        let bestHit = { idx: -1, len: 0 };
+        for (const t of tokens) {
+          const idx = tl.indexOf(t);
+          if (idx >= 0 && (bestHit.idx < 0 || idx < bestHit.idx)) {
+            bestHit = { idx, len: t.length };
+          }
+        }
+        const excerpt = bestHit.idx >= 0 ? makeExcerpt(text, bestHit.idx, bestHit.len) : "";
+        const score = tokenScore * 2 + titleBoost;
+
+        askScanState.results.push({
+          page: p,
+          score,
+          excerpt,
+          sectionTitle: getSectionForPage(p),
+        });
+      }
+    }
+
+    if (p % 12 === 0) await sleep(0);
+    if (performance.now() - start > timeBudgetMs) break;
+  }
+
+  const sorted = [...askScanState.results].sort((a, b) => b.score - a.score);
+
+  // de-dup close pages
+  const final = [];
+  for (const r of sorted) {
+    if (final.length >= maxReturn) break;
+    if (final.some((x) => Math.abs(x.page - r.page) <= 1)) continue;
+    final.push(r);
+  }
+
+  const done = askScanState.nextPage > endPage;
+  return { hits: final, done };
+}
+
+// Click delegation for Ask result buttons
+askOutput?.addEventListener("click", async (e) => {
+  const btn = e.target?.closest?.("button[data-action]");
+  if (!btn) return;
+
+  const action = btn.dataset.action;
+  const page = Number(btn.dataset.page || "0");
+
+  if (action === "ask-more") {
+    await handleAsk(); // continues scan
+    return;
+  }
+
+  if (!page || !pdfDoc) return;
+
+  if (action === "jump") {
+    await goToPage(page);
+    return;
+  }
+
+  if (action === "read") {
+    const t = await getPageTextForTts(page);
+    await speakChunked(`Page ${page}. ${t || "No readable text found on this page."}`, { page, label: "ask-hit" }, { resume: false });
+    return;
+  }
+});
+
+async function handleAsk() {
   const q = (askInput?.value || "").trim();
   if (!q) return;
 
-  const info = pdfDoc ? `PDF: ${currentPdfName || currentPdfId || ""}\nPage: ${pageNum}/${pageCount}\n` : "";
-  const msg =
-    `Local-only mode ✅\n\n` +
-    `${info}\n` +
-    `Question:\n${q}\n\n` +
-    `Next step (later): connect cloud AI + citations.\n\n` +
-    `Safety: Always verify in the official POH/AFM.`;
+  if (!pdfDoc) {
+    if (askOutput) askOutput.textContent = "Load a PDF first.";
+    return;
+  }
 
-  if (askOutput) askOutput.textContent = msg;
+  if (askOutput) askOutput.innerHTML = `<div style="opacity:.85;">Searching your POH/AFM offline…</div>`;
+
+  const { hits, done } = await runLocalAskIncremental(q, { timeBudgetMs: 1200, maxReturn: 7 });
+
+  if (!hits.length) {
+    if (askOutput) {
+      askOutput.innerHTML =
+        `<div style="font-weight:700;">No strong matches found.</div>
+         <div style="opacity:.8;margin-top:8px;">Try shorter keywords (e.g., “Vref”, “105”, “oil pressure”, “takeoff”).</div>
+         <div style="opacity:.75;margin-top:10px;">Safety: Always verify in the official POH/AFM.</div>`;
+    }
+    return;
+  }
+
+  const header =
+    `<div style="font-weight:800;">Best places to look</div>
+     <div style="opacity:.8;margin-top:6px;">Offline mode: I’m pointing you to the most relevant pages.</div>
+     <div style="opacity:.75;margin-top:6px;">Question: ${escapeHtml(q)}</div>`;
+
+  const cards = hits
+    .map((h, idx) => {
+      const title = h.sectionTitle ? escapeHtml(h.sectionTitle) : "Relevant page";
+      const excerpt = h.excerpt ? escapeHtml(h.excerpt) : "";
+      return `
+        <div style="margin-top:12px;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.10);">
+          <div style="font-weight:700;">${idx + 1}. ${title} <span style="opacity:.75;">(p.${h.page})</span></div>
+          ${excerpt ? `<div style="opacity:.85;font-size:12px;margin-top:8px;white-space:pre-wrap;">"${excerpt}"</div>` : ``}
+          <div style="display:flex;gap:10px;margin-top:10px;">
+            <button data-action="jump" data-page="${h.page}">Jump</button>
+            <button data-action="read" data-page="${h.page}">Read from here</button>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  const moreBtn = done
+    ? ""
+    : `<div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
+         <button data-action="ask-more">Search more</button>
+         <span style="opacity:.75;font-size:12px;">Scanning… ${Math.min(askScanState?.nextPage || 1, pageCount)}/${pageCount}</span>
+       </div>`;
+
+  const footer = `<div style="opacity:.75;margin-top:12px;">Safety: Always verify in the official POH/AFM.</div>`;
+
+  if (askOutput) askOutput.innerHTML = header + cards + moreBtn + footer;
 }
 
 // =====================================================
@@ -733,7 +1128,7 @@ async function loadPdfFromBytes(bytes) {
 
   const task = pdfjsLib.getDocument({
     data,
-    standardFontDataUrl: "/standard_fonts/", // ok even if folder missing
+    standardFontDataUrl: "./standard_fonts/", // GitHub Pages-safe
   });
 
   pdfDoc = await task.promise;
@@ -744,7 +1139,12 @@ async function loadPdfFromBytes(bytes) {
   pageNum = 1;
 
   pageTextCache.clear();
+  pageTtsCache.clear();
   clearSearchUI();
+
+  // Reset Ask scan state + Resume progress whenever a new PDF loads
+  askScanState = null;
+  lastReadProgress = null;
 
   enablePdfDependentControls(true);
   setPageInfo();
@@ -781,8 +1181,6 @@ async function loadPdfFromFileAndSave(file) {
   currentPdfName = file.name;
 
   const buffer = await file.arrayBuffer();
-
-  // clone for DB vs pdf.js
   const bufferForDb = buffer.slice(0);
 
   await savePdfToLibrary({
@@ -816,7 +1214,7 @@ async function restoreLastPdfOnStartup() {
     await refreshLibrarySelectUI();
     await openWithRetries(rec.buffer, { tries: 3, delayMs: 250 });
 
-    restoredOnStartuped = true; // ✅ important (fixes console issues + empty state)
+    restoredOnStartuped = true;
 
     if (askOutput) {
       askOutput.textContent =
@@ -829,7 +1227,7 @@ async function restoreLastPdfOnStartup() {
 }
 
 // =====================================================
-// Feedback (where to type)
+// Feedback (copy to clipboard)
 // =====================================================
 async function copyFeedbackFlow() {
   const typed = prompt(
@@ -992,7 +1390,7 @@ readSectionBtn?.addEventListener("click", async () => {
 });
 
 stopReadBtn?.addEventListener("click", () => {
-  stopTts();
+  stopTts({ keepProgress: true }); // keep resume progress
 });
 
 if (micBtn) {
@@ -1052,9 +1450,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   setMicStatus("Mic ready. Hold to talk.");
 });
 
-// =====================================================
 // Small safety: cancel search if user loads another PDF fast
-// =====================================================
 function cancelSearch() {
   searchCancelToken.cancel = true;
 }
