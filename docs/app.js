@@ -345,18 +345,55 @@ async function goToPage(p) {
 // =====================================================
 async function getPageText(pageNumber1Based) {
   if (!pdfDoc) return "";
-  if (pageTextCache.has(pageNumber1Based)) return pageTextCache.get(pageNumber1Based);
 
   const page = await pdfDoc.getPage(pageNumber1Based);
-  const tc = await page.getTextContent();
-  const text = (tc.items || [])
-    .map((it) => (it && it.str ? it.str : ""))
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim();
+  const tc = await page.getTextContent({ includeMarkedContent: true });
 
-  pageTextCache.set(pageNumber1Based, text);
-  return text;
+  const items = (tc.items || [])
+    .map(it => {
+      const str = (it.str || "").replace(/\s+/g, " ").trim();
+      if (!str) return null;
+
+      const t = it.transform || [];
+      const x = t[4] ?? 0;
+      const y = t[5] ?? 0;
+
+      return { str, x, y };
+    })
+    .filter(Boolean);
+
+  if (!items.length) return "";
+
+  // Sort: top → bottom, left → right
+  items.sort((a, b) => {
+    const dy = b.y - a.y;
+    if (Math.abs(dy) > 1.5) return dy;
+    return a.x - b.x;
+  });
+
+  // Group into visual lines
+  const lines = [];
+  let current = [];
+  let currentY = items[0].y;
+
+  const sameLine = (y1, y2) => Math.abs(y1 - y2) <= 2.5;
+
+  for (const it of items) {
+    if (!sameLine(it.y, currentY)) {
+      current.sort((a, b) => a.x - b.x);
+      lines.push(current.map(w => w.str).join(" "));
+      current = [];
+      currentY = it.y;
+    }
+    current.push(it);
+  }
+
+  if (current.length) {
+    current.sort((a, b) => a.x - b.x);
+    lines.push(current.map(w => w.str).join(" "));
+  }
+
+  return lines.join("\n");
 }
 
 // =====================================================
@@ -809,6 +846,12 @@ async function speakChunked(text, { page, label } = {}, { resume = false } = {})
       ttsSpeaking = false;
       refreshResumeBtn();
     };
+
+    // Enable Resume immediately even if user stops before onstart fires
+if (lastReadProgress && (lastReadProgress.offset || 0) === 0) {
+  lastReadProgress.offset = 1;
+  refreshResumeBtn();
+}
 
     window.speechSynthesis.speak(u);
   };
