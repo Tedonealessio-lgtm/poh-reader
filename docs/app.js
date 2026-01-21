@@ -188,15 +188,20 @@ let searchCancelToken = { cancel: false };
 // TTS
 let voices = [];
 let ttsSpeaking = false;
+let ttsStartedByRead = false;
 
 // For resume (chunked)
 let lastReadProgress = null; // { page, key, offset, label }
+if (resumeReadBtn) resumeReadBtn.disabled = true;
 
-// Stop/cancel tracking (so Stop keeps progress)
+// Stop/cancel tracking
 let ttsWasCancelled = false;
 let ttsKeepProgressOnCancel = false;
 
-// =====================================================
+// Extra: track partial progress while speaking (so Resume works even if you stop mid-chunk)
+let ttsHasBoundaryProgress = false;
+
+// ====================================================
 // Helpers / UI
 // =====================================================
 function setLibraryStatus(msg) {
@@ -213,6 +218,13 @@ function setMicStatus(msg) {
 
 function setPageInfo() {
   if (pageInfo) pageInfo.textContent = pdfDoc ? `Page: ${pageNum} / ${pageCount}` : "Page: – / –";
+}
+
+function updateResumeBtnState() {
+  if (!resumeReadBtn) return;
+  // Enable whenever we have ANY progress object (even offset=0).
+  // If offset is still 0, Resume will simply restart from the beginning.
+  resumeReadBtn.disabled = !pdfDoc || !lastReadProgress;
 }
 
 function enableCoreInputs() {
@@ -236,7 +248,7 @@ function enablePdfDependentControls(enabled) {
 
   if (readHitsBtn) readHitsBtn.disabled = !enabled || lastSearchHits.length === 0;
 
-  if (resumeReadBtn) resumeReadBtn.disabled = !enabled || !lastReadProgress;
+  updateResumeBtnState();
 }
 
 function isRenderingCancelled(err) {
@@ -344,18 +356,18 @@ function cleanTtsText(text) {
 
   // Remove common boilerplate patterns (Pilatus PC-12 footer style)
   const patterns = [
-    /\bissued\b\s*[:\-]?\s*[a-z]{3,9}\s+\d{1,2},\s+\d{4}/gi,              // Issued: September 15, 2006
-    /\brevision\b\s*\d+\s*[:\-]?\s*[a-z]{3,9}\s+\d{1,2},\s+\d{4}/gi,      // Revision 15: Nov 06, 2015
-    /\brevision\b\s*[:\-]?\s*\d{1,3}/gi,                                  // Revision: 15
-    /\brev\.?\b\s*[:\-]?\s*\d{1,3}/gi,                                    // Rev. 15
-    /\breport\s*(no|number)\b\s*[:\-]?\s*[0-9a-z\-/. ]{1,20}/gi,          // Report No: 02277
-    /\bdoc(ument)?\s*(no|number)\b\s*[:\-]?\s*[0-9a-z\-/. ]{1,25}/gi,     // Document No: ...
-    /\beffective\s*date\b\s*[:\-]?\s*[0-9a-z.,/ ]{1,25}/gi,               // Effective Date ...
-    /\bprint(ed)?\s*date\b\s*[:\-]?\s*[0-9a-z.,/ ]{1,25}/gi,              // Printed Date ...
+    /\bissued\b\s*[:\-]?\s*[a-z]{3,9}\s+\d{1,2},\s+\d{4}/gi,
+    /\brevision\b\s*\d+\s*[:\-]?\s*[a-z]{3,9}\s+\d{1,2},\s+\d{4}/gi,
+    /\brevision\b\s*[:\-]?\s*\d{1,3}/gi,
+    /\brev\.?\b\s*[:\-]?\s*\d{1,3}/gi,
+    /\breport\s*(no|number)\b\s*[:\-]?\s*[0-9a-z\-/. ]{1,20}/gi,
+    /\bdoc(ument)?\s*(no|number)\b\s*[:\-]?\s*[0-9a-z\-/. ]{1,25}/gi,
+    /\beffective\s*date\b\s*[:\-]?\s*[0-9a-z.,/ ]{1,25}/gi,
+    /\bprint(ed)?\s*date\b\s*[:\-]?\s*[0-9a-z.,/ ]{1,25}/gi,
 
     // Page markers
-    /\bpage\s+\d+\s*(of\s+\d+)?\b/gi,                                     // Page 1 of 5
-    /\b\d{1,4}\s*[-–]\s*\d{1,4}\b/g,                                      // 1-5
+    /\bpage\s+\d+\s*(of\s+\d+)?\b/gi,
+    /\b\d{1,4}\s*[-–]\s*\d{1,4}\b/g,
   ];
 
   for (const rx of patterns) t = t.replace(rx, " ");
@@ -565,23 +577,20 @@ async function runSearch(query) {
 // =====================================================
 // TTS (Voice Read) + REAL RESUME (chunked)
 // =====================================================
-// =====================================================
-// Voice mode + language detection (conservative)
-// =====================================================
-let voiceMode = "english"; // "english" | "auto" | "manual"
-// Recommendation: keep "english" as default because POHs are English.
 
+// Voice mode + language detection (conservative)
+let voiceMode = "english"; // "english" | "auto" | "manual"
+
+// Fast language hint (conservative)
 function detectLangFast(text) {
   const t = (text || "").toLowerCase();
 
-  // Strong German signals
   const umlauts = (t.match(/[äöüß]/g) || []).length;
   if (umlauts >= 3) return "de";
 
-  // Token-based hints (conservative)
   const words = t.split(/\s+/).filter(Boolean);
   const sample = words.slice(0, 250);
-  if (sample.length < 40) return "en"; // too short -> don’t flip
+  if (sample.length < 40) return "en";
 
   const germanSet = new Set([
     "und","der","die","das","nicht","mit","für","ist","sind","ein","eine",
@@ -599,9 +608,7 @@ function detectLangFast(text) {
     if (englishSet.has(w)) en++;
   }
 
-  // Switch to German ONLY if clearly German (won’t trigger on POHs)
   if (de >= 6 && de >= en * 2) return "de";
-
   return "en";
 }
 
@@ -612,7 +619,6 @@ function pickBestVoiceForLang(lang) {
 
   const prefer = (rx) => pool.find(v => rx.test((v.name || "").toLowerCase()));
 
-  // Warmest first
   return (
     prefer(/siri/) ||
     prefer(/enhanced|premium|neural|natural/) ||
@@ -638,16 +644,32 @@ function refreshVoices() {
     voiceSelect.appendChild(opt);
   }
 
-  // Pick the most human-sounding voice we can find (English)
-const best = pickBestVoiceForLang("en");
-if (best) voiceSelect.value = best.name;
-
+  const best = pickBestVoiceForLang("en");
+  if (best) voiceSelect.value = best.name;
 }
 
-// stop speech; keepProgress=true allows next "Read" to resume
+// --- IMPORTANT CHANGE ---
+// We need two kinds of stopping:
+//
+// 1) cancelTtsSilently(): used internally when starting a new read.
+//    This prevents the confusing "STOP pressed" log when you press "Read page".
+//
+// 2) stopTts(): used by the Stop button. This logs and keeps resume progress.
+//
+function cancelTtsSilently() {
+  // Mark cancelled so onend doesn't advance or wipe state.
+  ttsWasCancelled = true;
+  ttsKeepProgressOnCancel = true;
+
+  try {
+    window.speechSynthesis.cancel();
+  } catch {}
+
+  ttsSpeaking = false;
+  // do NOT log here (this is used when starting a new read)
+}
+
 function stopTts({ keepProgress = true } = {}) {
-  // iOS Safari: cancel() triggers onend afterwards.
-  // Mark as cancelled so onend won't wipe resume progress.
   ttsWasCancelled = true;
   ttsKeepProgressOnCancel = keepProgress;
 
@@ -656,11 +678,14 @@ function stopTts({ keepProgress = true } = {}) {
   } catch {}
 
   ttsSpeaking = false;
-  console.log("STOP pressed - lastReadProgress =", lastReadProgress);
 
   if (!keepProgress) lastReadProgress = null;
 
+  // For debugging (only on manual Stop)
+  console.log("STOP pressed - lastReadProgress =", lastReadProgress);
+
   enablePdfDependentControls(!!pdfDoc);
+  updateResumeBtnState();
 }
 
 function makeTextKey(text) {
@@ -668,7 +693,8 @@ function makeTextKey(text) {
   return `${s.length}:${s.slice(0, 40)}:${s.slice(-40)}`;
 }
 
-function chunkText(text, maxLen = 220) {
+// Smaller chunks help iOS/Chrome + make Resume feel responsive
+function chunkText(text, maxLen = 140) {
   const s = String(text || "").trim();
   if (!s) return [];
 
@@ -678,10 +704,9 @@ function chunkText(text, maxLen = 220) {
   while (i < s.length) {
     let end = Math.min(i + maxLen, s.length);
 
-    // try not to cut in the middle of a word
     if (end < s.length) {
       const lastSpace = s.lastIndexOf(" ", end);
-      if (lastSpace > i + 80) end = lastSpace;
+      if (lastSpace > i + 60) end = lastSpace;
     }
 
     chunks.push(s.slice(i, end).trim());
@@ -692,7 +717,8 @@ function chunkText(text, maxLen = 220) {
 }
 
 async function speakChunked(text, { page, label } = {}, { resume = false } = {}) {
-  stopTts({ keepProgress: true });
+  // Stop any current speech, but silently (so "Read page" doesn't print "STOP pressed")
+  cancelTtsSilently();
 
   const cleaned = String(text || "").trim();
   if (!cleaned) return;
@@ -705,29 +731,37 @@ async function speakChunked(text, { page, label } = {}, { resume = false } = {})
   }
 
   const remaining = cleaned.slice(offset);
-  const chunks = chunkText(remaining, 220);
+  const chunks = chunkText(remaining, 140);
   if (!chunks.length) return;
 
   ttsSpeaking = true;
+  ttsHasBoundaryProgress = false;
+
+  // Create (or refresh) the progress object immediately so Resume becomes clickable
   lastReadProgress = { page, key, offset, label };
+  updateResumeBtnState();
 
   let v = null;
-
-if (voiceMode === "manual") {
-  v = getSelectedVoice();
-} else if (voiceMode === "english") {
-  v = pickBestVoiceForLang("en");
-} else {
-  // auto (conservative)
-  const lang = detectLangFast(cleaned);
-  v = pickBestVoiceForLang(lang === "de" ? "de" : "en");
-}
+  if (voiceMode === "manual") {
+    v = getSelectedVoice();
+  } else if (voiceMode === "english") {
+    v = pickBestVoiceForLang("en");
+  } else {
+    const lang = detectLangFast(cleaned);
+    v = pickBestVoiceForLang(lang === "de" ? "de" : "en");
+  }
 
   const rate = Number(ttsRate?.value || 1.0);
+
+  // local variable that tracks where the CURRENT utterance begins in the full cleaned text
+  // This is crucial for updating offset during onboundary.
+  let currentUtteranceStartOffset = lastReadProgress.offset;
 
   const speakNext = () => {
     if (!chunks.length) {
       ttsSpeaking = false;
+      enablePdfDependentControls(!!pdfDoc);
+      updateResumeBtnState();
       return;
     }
 
@@ -737,26 +771,65 @@ if (voiceMode === "manual") {
     if (v) u.voice = v;
     u.rate = Number.isFinite(rate) ? rate : 1.0;
 
+    // Some browsers fire onstart, some don't. But if it does, we at least know speech began.
+    u.onstart = () => {
+      // If we stop quickly, still allow Resume (even if offset==0)
+      updateResumeBtnState();
+    };
+
+    // KEY FIX:
+    // Update progress while speaking, so if user presses Stop mid-chunk,
+    // we still have a non-zero offset and Resume enables reliably.
+    u.onboundary = (ev) => {
+      // ev.charIndex exists in Chrome; on iOS it's sometimes missing.
+      if (lastReadProgress && typeof ev?.charIndex === "number") {
+        const newOffset = currentUtteranceStartOffset + Math.max(0, ev.charIndex);
+        // Clamp
+        lastReadProgress.offset = Math.min(cleaned.length, newOffset);
+        ttsHasBoundaryProgress = true;
+        updateResumeBtnState();
+      }
+    };
+
     u.onend = () => {
-  // iOS Safari: cancel() still fires onend
-  if (ttsWasCancelled) {
-    ttsWasCancelled = false;
+      // iOS Safari + Chrome: cancel() can still fire onend
+      if (ttsWasCancelled) {
+        ttsWasCancelled = false;
 
-    // If stop was pressed, keep progress
-    if (!ttsKeepProgressOnCancel) {
-      lastReadProgress = null;
-    }
-    return;
-  }
+        if (!ttsKeepProgressOnCancel) {
+          lastReadProgress = null;
+        } else {
+          // If boundary never fired, we still at least keep the offset as-is.
+          // (could be 0 if they stopped very fast)
+        }
 
-  // normal end → advance offset
-  lastReadProgress.offset += chunk.length;
-  speakNext();
-};
+        ttsSpeaking = false;
+        enablePdfDependentControls(!!pdfDoc);
+        updateResumeBtnState();
+        return;
+      }
+
+      // Normal completion of this chunk:
+      // If boundary already moved offset inside chunk, ensure we advance at least to end of chunk.
+      if (lastReadProgress) {
+        const proposed = currentUtteranceStartOffset + chunk.length;
+        lastReadProgress.offset = Math.max(lastReadProgress.offset || 0, proposed);
+      }
+
+      // Prepare start offset for next chunk
+      currentUtteranceStartOffset = lastReadProgress ? (lastReadProgress.offset || 0) : 0;
+
+      speakNext();
+    };
 
     u.onerror = () => {
       ttsSpeaking = false;
+      enablePdfDependentControls(!!pdfDoc);
+      updateResumeBtnState();
     };
+
+    // Record where this utterance starts in the FULL text
+    currentUtteranceStartOffset = lastReadProgress ? (lastReadProgress.offset || 0) : 0;
 
     window.speechSynthesis.speak(u);
   };
@@ -764,17 +837,23 @@ if (voiceMode === "manual") {
   speakNext();
 }
 
-async function readCurrentPage() {
+async function readCurrentPage({ resume = false } = {}) {
   if (!pdfDoc) return;
   const text = await getPageTextForTts(pageNum);
 
   const canResume =
+    resume &&
     lastReadProgress &&
     lastReadProgress.page === pageNum &&
-    lastReadProgress.key === makeTextKey(text) &&
-    (lastReadProgress.offset || 0) > 0;
+    lastReadProgress.key === makeTextKey(text);
 
-  await speakChunked(text || "No readable text found on this page.", { page: pageNum, label: "page" }, { resume: !!canResume });
+  ttsStartedByRead = true;
+
+  await speakChunked(
+    text || "No readable text found on this page.",
+    { page: pageNum, label: "page" },
+    { resume: !!canResume }
+  );
 }
 
 async function readCurrentSection() {
@@ -782,7 +861,7 @@ async function readCurrentSection() {
 
   let idx = currentSectionIndex;
   if (idx < 0 || !sectionRanges[idx]) {
-    await readCurrentPage();
+    await readCurrentPage({ resume: false });
     return;
   }
 
@@ -815,10 +894,38 @@ async function readSearchHits() {
   await speakChunked(combined.trim(), { page: lastSearchHits[0].page, label: "hits" }, { resume: false });
 }
 
+// Resume button handler (was missing in your pasted file)
+async function resumeTts() {
+  if (!pdfDoc || !lastReadProgress) return;
+
+  const { page, label } = lastReadProgress;
+
+  // We can reliably resume only for single-page reads (and "ask-hit" which is also page-based).
+  if (label === "page" || label === "ask-hit") {
+    const t = await getPageTextForTts(page);
+    await goToPage(page);
+    await speakChunked(
+      t || "No readable text found on this page.",
+      { page, label: "page" },
+      { resume: true }
+    );
+    return;
+  }
+
+  // For section/hits we restart from the start page (simplest and safest)
+  await goToPage(page);
+  const t = await getPageTextForTts(page);
+  await speakChunked(
+    t || "No readable text found on this page.",
+    { page, label: "page" },
+    { resume: true }
+  );
+}
+
 // Hint user when returning from background
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden && lastReadProgress?.page) {
-    setLibraryStatus(`Audio paused. Press Read again to resume (page ${lastReadProgress.page}).`);
+    setLibraryStatus(`Audio paused. Press Resume to continue (page ${lastReadProgress.page}).`);
   }
 });
 
@@ -1156,7 +1263,7 @@ async function loadPdfFromBytes(bytes) {
 
   const task = pdfjsLib.getDocument({
     data,
-    standardFontDataUrl: "./standard_fonts/", // GitHub Pages-safe
+    standardFontDataUrl: "./standard_fonts/",
   });
 
   pdfDoc = await task.promise;
@@ -1173,6 +1280,7 @@ async function loadPdfFromBytes(bytes) {
   // Reset Ask scan state + Resume progress whenever a new PDF loads
   askScanState = null;
   lastReadProgress = null;
+  updateResumeBtnState();
 
   enablePdfDependentControls(true);
   setPageInfo();
@@ -1294,7 +1402,7 @@ async function copyFeedbackFlow() {
 // =====================================================
 fileInput?.addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
-  e.target.value = ""; // allow picking same file again
+  e.target.value = "";
   if (!file) return;
 
   if (file.type !== "application/pdf") {
@@ -1410,27 +1518,20 @@ readHitsBtn?.addEventListener("click", async () => {
 askBtn?.addEventListener("click", handleAsk);
 
 readPageBtn?.addEventListener("click", async () => {
-  await readCurrentPage();
+  await readCurrentPage({ resume: false });
 });
 
 readSectionBtn?.addEventListener("click", async () => {
   await readCurrentSection();
 });
 
-stopReadBtn.addEventListener("click", () => {
-  stopTts({ keepProgress: true }); // keep resume progress
-
-  // iOS Safari: cancel() can still trigger onend afterwards,
-  // so update the Resume button state on the next tick.
-  setTimeout(() => {
-    if (resumeReadBtn) {
-      resumeReadBtn.disabled = !lastReadProgress;
-    }
-  }, 0);
+stopReadBtn?.addEventListener("click", () => {
+  stopTts({ keepProgress: true });
+  // Update button state next tick (some browsers update synthesis async)
+  setTimeout(() => updateResumeBtnState(), 0);
 });
 
 resumeReadBtn?.addEventListener("click", async () => {
-  if (!pdfDoc || !lastReadProgress) return;
   await resumeTts();
 });
 
