@@ -263,6 +263,68 @@ function enablePdfDependentControls(enabled) {
   refreshResumeBtn();
 }
 
+function renderBestPlaces(places) {
+  const wrap = document.getElementById("bestPlacesWrap");
+  const box = document.getElementById("bestPlaces");
+  if (!wrap || !box) return;
+
+  // places can be: [ {page, title?, score?}, ... ]  OR  [pageNumber, ...]
+  const norm = (places || [])
+    .map(p => {
+      if (typeof p === "number") return { page: p };
+      if (typeof p === "string") return { page: parseInt(p, 10) };
+      return { ...p, page: parseInt(p.page, 10) };
+    })
+    .filter(p => Number.isFinite(p.page));
+
+  // Stable ordering (avoid “random looking” changes)
+  norm.sort((a, b) => {
+    const as = Number.isFinite(a.score) ? a.score : 0;
+    const bs = Number.isFinite(b.score) ? b.score : 0;
+    if (bs !== as) return bs - as;     // score desc
+    return a.page - b.page;            // page asc as tie-break
+  });
+
+  // Deduplicate pages
+  const seen = new Set();
+  const finalList = [];
+  for (const p of norm) {
+    if (seen.has(p.page)) continue;
+    seen.add(p.page);
+    finalList.push(p);
+  }
+
+  if (finalList.length === 0) {
+    box.innerHTML = `<div class="sectionMeta">No strong matches found.</div>`;
+    return;
+  }
+
+  // Render clickable rows
+  box.innerHTML = finalList
+    .slice(0, 8) // keep it readable on mobile
+    .map((p, idx) => {
+      const label = p.title ? `${p.title} (p.${p.page})` : `Page ${p.page}`;
+      return `
+        <button
+          class="hitCard" 
+          type="button"
+          data-page="${p.page}"
+          style="
+          width:100%;
+          display:block;
+          text-align:left;
+          background:none;
+          border:none;
+          padding:12px;
+          margin-top:8px;
+          "
+
+        </button>
+      `;
+    })
+    .join("");
+}
+
 function isRenderingCancelled(err) {
   return (
     err &&
@@ -1238,7 +1300,10 @@ async function handleAsk() {
 
   const footer = `<div style="opacity:.75;margin-top:12px;">Safety: Always verify in the official POH/AFM.</div>`;
 
-  if (askOutput) askOutput.innerHTML = header + cards + moreBtn + footer;
+  if (askOutput) {
+     askOutput.innerHTML = header + cards + moreBtn + footer;
+  }
+     renderBestPlaces(hits);
 }
 
 // =====================================================
@@ -1553,6 +1618,21 @@ stopReadBtn?.addEventListener("click", () => {
   refreshResumeBtn();
 });
 
+document.getElementById("bestPlaces")?.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-page]");
+  if (!btn) return;
+
+  const page = parseInt(btn.dataset.page, 10);
+  if (!Number.isFinite(page)) return;
+
+  // Jump to page
+  if (typeof gotoPage === "function") {
+    gotoPage(page);
+  } else if (window.__POH?.gotoPage) {
+    window.__POH.gotoPage(page);
+  }
+});
+
 resumeReadBtn?.addEventListener("click", async () => {
   if (!pdfDoc || !lastReadProgress) return;
   await resumeTts();
@@ -1626,3 +1706,13 @@ window.__POH = window.__POH || {};
 window.__POH.getPageTextForTts = getPageTextForTts;
 window.__POH.getProgress = () => ({ ...lastReadProgress });
 window.__POH.pageNum = () => pageNum;
+
+// Register Service Worker (GitHub Pages–safe)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('[SW] registered:', reg.scope))
+      .catch(err => console.error('[SW] registration failed:', err));
+  });
+}
+window.renderBestPlaces = renderBestPlaces;
