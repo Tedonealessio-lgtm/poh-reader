@@ -264,6 +264,7 @@ function enablePdfDependentControls(enabled) {
 }
 
 function renderBestPlaces(places) {
+  window.renderBestPlaces = renderBestPlaces;
   const wrap = document.getElementById("bestPlacesWrap");
   const box = document.getElementById("bestPlaces");
   if (!wrap || !box) return;
@@ -1521,6 +1522,20 @@ prevBtn?.addEventListener("click", async () => {
 nextBtn?.addEventListener("click", async () => {
   if (!pdfDoc || pageNum >= pageCount) return;
   pageNum += 1;
+  await renderPage(pageNum);
+  updateCurrentSectionFromPage();
+});
+
+// iOS-safe click handler for Best Places cards (delegation)
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest('button.hitCard[data-page]');
+  if (!btn) return;
+
+  const page = parseInt(btn.dataset.page, 10);
+  if (!Number.isFinite(page)) return;
+
+  if (!pdfDoc) return;
+  pageNum = Math.max(1, Math.min(page, pageCount));
   await renderPage(pageNum);
   updateCurrentSectionFromPage();
 });
