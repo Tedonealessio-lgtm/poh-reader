@@ -21,9 +21,17 @@
       <span>POH Reader</span>
     </div>
 
+    <div class="row navControls">
       <input id="file" type="file" accept="application/pdf" class="hiddenFile" />
       <button id="uploadBtn" class="uploadBtn">+ Upload POH / OM</button>
-      
+
+      <!-- Desktop nav controls (needed for bottom bar wiring too) -->
+      <button id="prev" type="button">◀ Prev</button>
+      <button id="next" type="button">Next ▶</button>
+      <span id="pageInfo">Page: — / —</span>
+    </div>
+
+    <div class="spacer"></div>
   </div>
 
   <!-- ================= WELCOME / EMPTY STATE ================= -->
@@ -98,6 +106,8 @@
       <button id="readPageBtn">Read page</button>
       <button id="readSectionBtn">Read section</button>
       <button id="stopReadBtn">Stop</button>
+
+      <!-- IMPORTANT: only ONE Resume button in the whole DOM -->
       <button id="resumeReadBtn" disabled>Resume</button>
 
       <label>Speed</label>
