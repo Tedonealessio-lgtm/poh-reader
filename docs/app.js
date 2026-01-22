@@ -5,6 +5,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "./pdf.worker.min.mjs";
 
 const $ = (id) => document.getElementById(id);
 
+const bs = document.getElementById("buildStamp");
+if (bs) bs.textContent = "build: " + new Date().toISOString();
+
 // =====================================================
 // IndexedDB (POH Library)
 // =====================================================
@@ -306,19 +309,53 @@ function renderBestPlaces(places) {
     .map((p, idx) => {
       const label = p.title ? `${p.title} (p.${p.page})` : `Page ${p.page}`;
       return `
-        <button
-          class="hitCard" 
-          type="button"
-          data-page="${p.page}"
-          style="
-          width:100%;
-          display:block;
-          text-align:left;
-          background:none;
-          border:none;
-          padding:12px;
-          margin-top:8px;
-          "
+       <button
+  class="hitCard"
+  type="button"
+  data-action="jump"
+  data-page="${p.page}"
+  style="
+    width:100%;
+    display:block;
+    text-align:left;
+    background:none;
+    border:none;
+    padding:12px;
+    margin-top:8px;
+  "
+>
+
+// Bind handlers directly to the rendered Best Places buttons (iOS reliable)
+const bestBtns = box.querySelectorAll('button.hitCard[data-page]');
+bestBtns.forEach((btn) => {
+  // Visual proof you are running the new code (remove later)
+  btn.style.outline = "1px solid rgba(255,255,255,0.15)";
+
+  const go = async (e) => {
+    // stop iOS turning tap into text selection / scroll gesture
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!pdfDoc) return;
+
+    const action = btn.dataset.action || "jump";
+    const page = Number(btn.dataset.page);
+    if (!Number.isFinite(page)) return;
+
+    pageNum = Math.max(1, Math.min(page, pageCount));
+    await renderPage(pageNum);
+
+    if (action === "jump") updateCurrentSectionFromPage();
+    if (action === "read") {
+      // later: hook TTS from here
+    }
+  };
+
+  // touchend is the key for iOS
+  btn.addEventListener("touchend", go, { passive: false });
+  // click as fallback for desktop
+  btn.addEventListener("click", go);
+});
 
         </button>
       `;
@@ -1526,18 +1563,48 @@ nextBtn?.addEventListener("click", async () => {
   updateCurrentSectionFromPage();
 });
 
-// iOS-safe click handler for Best Places cards (delegation)
-document.addEventListener("click", async (e) => {
-  const btn = e.target.closest('button.hitCard[data-page]');
+// iOS: Best Places tap handler (touchend, capture) — works when click doesn’t fire
+document.addEventListener("touchend", async (e) => {
+  const btn = e.target.closest('button[data-action][data-page]');
   if (!btn) return;
 
-  const page = parseInt(btn.dataset.page, 10);
-  if (!Number.isFinite(page)) return;
+  e.preventDefault();
+  e.stopPropagation();
 
   if (!pdfDoc) return;
+
+  const action = btn.dataset.action;
+  const page = Number(btn.dataset.page);
+  if (!Number.isFinite(page)) return;
+
   pageNum = Math.max(1, Math.min(page, pageCount));
   await renderPage(pageNum);
-  updateCurrentSectionFromPage();
+
+  if (action === "jump") updateCurrentSectionFromPage();
+  if (action === "read") {
+    // later: hook TTS from here
+  }
+}, { passive: false, capture: true });
+
+// iOS-safe click handler for Best Places cards (delegation)
+document.addEventListener("click", async (e) => {
+  const btn = e.target.closest('button[data-action][data-page]');
+  if (!btn || !pdfDoc) return;
+
+  const action = btn.dataset.action;
+  const page = Number(btn.dataset.page);
+  if (!Number.isFinite(page)) return;
+
+  pageNum = Math.max(1, Math.min(page, pageCount));
+  await renderPage(pageNum);
+
+  if (action === "jump") {
+    updateCurrentSectionFromPage();
+  }
+
+  if (action === "read") {
+    // later: hook TTS from here
+  }
 });
 
 uploadBtn?.addEventListener("click", () => {
