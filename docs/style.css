@@ -284,6 +284,20 @@ mark {
   touch-action: manipulation;
 }
 
+/* iOS Safari: disable text selection for Best Places cards */
+#bestPlacesWrap,
+#bestPlacesWrap * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+/* iOS Safari: allow Best Places to receive taps */
+#bestPlacesWrap {
+  position: relative;
+  z-index: 10;
+}
+
 /* --- iOS: fixed bottom bar must not cover content --- */
 :root { --bottomBarH: 130px; } /* tweak if needed */
 
