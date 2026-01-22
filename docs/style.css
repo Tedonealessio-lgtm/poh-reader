@@ -283,3 +283,14 @@ mark {
   -webkit-touch-callout: none;
   touch-action: manipulation;
 }
+
+/* --- iOS: fixed bottom bar must not cover content --- */
+:root { --bottomBarH: 130px; } /* tweak if needed */
+
+main { padding-bottom: var(--bottomBarH); }
+.panel { padding-bottom: var(--bottomBarH); }
+
+.bottomBar { 
+  height: var(--bottomBarH);
+  padding-bottom: env(safe-area-inset-bottom);
+}
