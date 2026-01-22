@@ -269,3 +269,17 @@ mark {
   flex: 1;
   overflow-y: auto;
 }
+
+/* iOS Safari: ensure Best Places cards are tappable */
+#bestPlacesWrap,
+#bestPlaces {
+  pointer-events: auto;
+}
+
+#bestPlaces button.hitCard {
+  pointer-events: auto;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
