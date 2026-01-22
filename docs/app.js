@@ -8,6 +8,46 @@ const $ = (id) => document.getElementById(id);
 const bs = document.getElementById("buildStamp");
 if (bs) bs.textContent = "build: " + new Date().toISOString();
 
+/* ===============================
+   BEST PLACES TAP HANDLER (iOS)
+   =============================== */
+
+const bestPlacesEl = document.getElementById("bestPlaces");
+
+function onBestPlaceTap(e) {
+  const t = (e.target && e.target.nodeType === 1) ? e.target : e.target?.parentElement;
+  const btn = t?.closest(".hitCard[data-page]");
+  if (!btn) return;
+
+  // CRITICAL: stop iOS text selection
+  e.preventDefault();
+  e.stopPropagation();
+
+  // visual proof (temporary)
+  btn.style.outline = "2px solid lime";
+  setTimeout(() => (btn.style.outline = ""), 300);
+
+  if (!pdfDoc) return;
+
+  const page = Number(btn.dataset.page);
+  if (!Number.isFinite(page)) return;
+
+    pageNum = Math.max(1, Math.min(page, pageCount));
+  renderPage(pageNum);
+  updateCurrentSectionFromPage?.();
+}
+
+// iOS needs touchend
+bestPlacesEl?.addEventListener("touchstart", onBestPlaceTap, {
+  passive: false,
+  capture: true,
+});
+
+// desktop fallback
+bestPlacesEl?.addEventListener("click", onBestPlaceTap, {
+  capture: true,
+});
+
 // =====================================================
 // IndexedDB (POH Library)
 // =====================================================

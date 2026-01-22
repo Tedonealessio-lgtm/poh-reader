@@ -276,8 +276,7 @@ mark {
   pointer-events: auto;
 }
 
-#bestPlaces button.hitCard {
-  pointer-events: auto;
+#bestPlaces .hitCard {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
