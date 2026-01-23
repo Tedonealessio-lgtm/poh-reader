@@ -1828,11 +1828,13 @@ window.__POH.getProgress = () => ({ ...lastReadProgress });
 window.__POH.pageNum = () => pageNum;
 
 // Register Service Worker (GitHub Pages–safe)
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('[SW] registered:', reg.scope))
-      .catch(err => console.error('[SW] registration failed:', err));
-  });
-}
+// // Register Service Worker (GitHub Pages-safe)
+// if ('serviceWorker' in navigator) {
+//   window.addEventListener('load', () => {
+//     navigator.serviceWorker.register('./sw.js')
+//       .then(reg => console.log('[SW] registered:', reg.scope))
+//       .catch(err => console.error('[SW] registration failed:', err));
+//   });
+// }
+
 window.renderBestPlaces = renderBestPlaces;
