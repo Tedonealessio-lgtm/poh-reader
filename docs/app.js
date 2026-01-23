@@ -368,8 +368,6 @@ function renderBestPlaces(places) {
 // Bind handlers directly to the rendered Best Places buttons (iOS reliable)
 const bestBtns = box.querySelectorAll('button.hitCard[data-page]');
 bestBtns.forEach((btn) => {
-  // Visual proof you are running the new code (remove later)
-  btn.style.outline = "1px solid rgba(255,255,255,0.15)";
 
   const go = async (e) => {
     // stop iOS turning tap into text selection / scroll gesture
