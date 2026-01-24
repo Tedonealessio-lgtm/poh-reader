@@ -649,6 +649,9 @@ async function runSearch(query) {
   if (searchResults) {
     searchResults.innerHTML = `<div style="opacity:.7;font-size:12px;">Searching pages ${startPage}–${endPage}…</div>`;
   }
+  if (searchStatus) {
+    searchStatus.textContent = `Searching page ${startPage}/${pageCount}…`;
+  }
 
   for (let p = startPage; p <= endPage; p++) {
     if (searchCancelToken.cancel) break;
@@ -665,37 +668,44 @@ async function runSearch(query) {
       }
     }
 
+    // progress update every 10 pages
     if (p % 10 === 0) {
-      if (searchResults) {
-        searchResults.innerHTML = `<div style="opacity:.7;font-size:12px;">Searching… page ${p}/${endPage}</div>`;
+      if (searchStatus) {
+        searchStatus.textContent = `Searching page ${p}/${pageCount}…`;
       }
       await sleep(0);
     }
-  }
+  } // ✅ closes FOR loop
 
   lastSearchHits = hits;
+
   console.log("[SEARCH] hits length:", hits.length);
-console.log("[SEARCH] first hit:", hits[0]);
+  console.log("[SEARCH] first hit:", hits[0]);
 
   if (!searchResults) return;
-  console.log("[SEARCH] searchResults exists, continuing render");
 
   if (!hits.length) {
     searchResults.innerHTML = `<div style="opacity:.7;font-size:12px;">No hits found.</div>`;
     if (readHitsBtn) readHitsBtn.disabled = true;
+    if (searchStatus) searchStatus.textContent = "No hits found.";
     return;
   }
 
+  if (searchStatus) {
+    searchStatus.textContent = `Found ${hits.length} hit(s).`;
+  }
+
   const wrap = document.createElement("div");
+
   for (const h of hits) {
     const item = document.createElement("div");
-    item.style.padding = "10px";
-    item.style.borderRadius = "10px";
-    item.style.margin = "8px 0";
-    item.style.cursor = "pointer";
-    item.style.border = "1px solid rgba(255,255,255,.08)";
-    item.innerHTML = `<div style="font-weight:600;">Page ${h.page}</div>
-      <div style="opacity:.8;font-size:12px;margin-top:6px;">${escapeHtml(h.context)}</div>`;
+    item.className = "hit"; // ✅ lets CSS style it
+    item.innerHTML = `
+      <div style="font-weight:600;">Page ${h.page}</div>
+      <div style="opacity:.8;font-size:12px;margin-top:6px;">
+        ${escapeHtml(h.context)}
+      </div>
+    `;
 
     item.addEventListener("click", async () => {
       await goToPage(h.page);
@@ -706,12 +716,13 @@ console.log("[SEARCH] first hit:", hits[0]);
 
   searchResults.innerHTML = "";
   searchResults.appendChild(wrap);
+
   console.log("[SEARCH] searchResults children:", searchResults.children.length);
-console.log("[SEARCH] searchResults height:", searchResults.offsetHeight);
-console.log("[SEARCH] searchResults scrollHeight:", searchResults.scrollHeight);
+  console.log("[SEARCH] searchResults height:", searchResults.offsetHeight);
+  console.log("[SEARCH] searchResults scrollHeight:", searchResults.scrollHeight);
 
   if (readHitsBtn) readHitsBtn.disabled = false;
-}
+} // ✅ closes runSearch
 
 // =====================================================
 // TTS (chunked resume)

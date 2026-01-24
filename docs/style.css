@@ -390,3 +390,23 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
     padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
   }
 }
+
+/* ===== iOS/mobile: avoid nested scroll traps in LEFT panel ===== */
+@media (max-width: 768px){
+  /* Let the page scroll naturally */
+  .panelLeft{
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Don’t trap scroll inside sections/results */
+  .sectionsList{
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  #searchResults{
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
