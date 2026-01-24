@@ -1,12 +1,13 @@
 :root{
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  --bottomBarH: 130px;
+  --bottomBarH: 160px;
 }
 
 body{
   margin:0;
   background:#0e1622;
   color:#e8eef7;
+  padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
 }
 
 /* ===== TOP BAR ===== */
@@ -25,19 +26,29 @@ body{
   gap:10px;
 }
 
-.topbar .brand img{
-  height: 48px;
-  width:auto;
-  display:block;
+.brand img{
+  height:48px;
 }
 
-.brand span{ font-weight:600; letter-spacing:1px; font-size:14px; opacity:.9; }
+.brand span{
+  font-weight:600;
+  letter-spacing:1px;
+  font-size:14px;
+  opacity:.9;
+}
 
-.row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.row{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+}
 
 .hiddenFile{
-  position:absolute; left:-9999px; width:1px; height:1px; opacity:0;
+  position:absolute;
+  left:-9999px;
 }
+
 .uploadBtn{
   font-weight:600;
   border-radius:12px;
@@ -52,29 +63,21 @@ main{
   padding:12px;
 }
 
-/* ===== PANELS (BASE) ===== */
+/* ===== PANELS ===== */
 .panel{
-  background:#141f2d;   /* lighter than body */
+  background:#141f2d;
   border:1px solid #22344a;
   border-radius:12px;
   padding:14px;
   min-height:0;
 }
 
-/* Small helper text under headings */
+/* ===== TEXT HELPERS ===== */
 .sectionHint{
   font-size:12px;
   opacity:.72;
   margin:-6px 0 10px 0;
   line-height:1.35;
-}
-
-/* Generic card (used for Best Places etc.) */
-.card{
-  background: rgba(10, 14, 20, 0.55);
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:12px;
-  padding:12px;
 }
 
 .sectionTitle{
@@ -83,25 +86,31 @@ main{
   margin-bottom:6px;
 }
 
-.sectionMeta{ font-size:12px; opacity:.75; line-height:1.35; }
+.sectionMeta{
+  font-size:12px;
+  opacity:.75;
+  line-height:1.35;
+}
 
 /* ===== VIEWER ===== */
 .viewer{
-  background:#0c1420;   /* slightly darker, content well framed */
+  background:#0c1420;
   border:1px solid #22344a;
   border-radius:12px;
   padding:12px;
   overflow:auto;
 }
+
 canvas{
   width:100%;
-  height:auto;
   background:#fff;
   border-radius:6px;
 }
 
 /* ===== INPUTS ===== */
-input[type="text"], textarea, select{
+input[type="text"],
+textarea,
+select{
   width:100%;
   padding:10px;
   border-radius:10px;
@@ -109,6 +118,7 @@ input[type="text"], textarea, select{
   background:#0b0f14;
   color:#e8eef7;
 }
+
 textarea{ resize:vertical; }
 
 /* ===== BUTTONS ===== */
@@ -120,10 +130,29 @@ button{
   color:#e8eef7;
   cursor:pointer;
 }
-button:hover:not(:disabled){ background:#1d2f47; }
-button:disabled{ opacity:.45; cursor:not-allowed; }
 
-/* ===== RESULTS / ANSWER ===== */
+button:hover:not(:disabled){
+  background:#1d2f47;
+}
+
+button:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+/* ===== LEFT PANEL (DESKTOP) ===== */
+.panelLeft{
+  display:flex;
+  flex-direction:column;
+}
+
+.sectionsList{
+  max-height:40vh;
+  overflow-y:auto;
+  padding-right:6px;
+}
+
+/* ===== SEARCH RESULTS ===== */
 .results{
   margin-top:10px;
   padding:8px;
@@ -131,7 +160,23 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   border:1px solid #243348;
   background:#0b0f14;
   max-height:40vh;
-  overflow:auto;
+  overflow-y:auto;
+}
+
+#searchResults .hit,
+#searchResults div{
+  display:block;
+  padding:10px 12px;
+  margin:8px 0;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.06);
+}
+
+/* ===== RIGHT PANEL ===== */
+.panelRight{
+  display:flex;
+  flex-direction:column;
 }
 
 .answer{
@@ -145,105 +190,40 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   line-height:1.35;
 }
 
-/* Simple one-line safety note (replaces the big repeating card) */
 .safetyLine{
   margin-top:10px;
   font-size:12px;
   opacity:.75;
 }
 
-/* =========================
-   LEFT PANEL: make lists scroll
-   ========================= */
-.panelLeft{
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  max-height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-}
-.sectionsList{
-  flex:1 1 auto;
-  min-height:0;
-  overflow-y:auto;
-  padding-right:6px;
-}
-
-/* =========================
-   RIGHT PANEL: cards scroll, TTS pinned (DESKTOP)
-   ========================= */
-.panelRight{
-  display:flex;
-  flex-direction:column;
-  min-height:0;
-  max-height:100vh;
-  overflow:hidden;
-}
-
-/* This is the scroll container on desktop */
-.panelRight #answer{
-  flex:1 1 auto;
-  min-height:0;
-  overflow-y:auto;
-  -webkit-overflow-scrolling:touch;
-  padding-bottom:12px;
-}
-
-/* Sticky only makes sense on desktop */
-.panelRight #ttsControls{
-  flex:0 0 auto;
-  position:sticky;
-  bottom:0;
-  z-index:50;
-  background:rgba(16,18,22,.95);
-  backdrop-filter:blur(8px);
-  border-top:1px solid rgba(255,255,255,.08);
-  padding:10px;
-  padding-bottom:env(safe-area-inset-bottom);
-  border-radius:12px;
+/* ===== TTS CONTROLS ===== */
+#ttsControls{
   margin-top:10px;
+  padding:10px;
+  border-top:1px solid rgba(255,255,255,.08);
 }
 
-/* ===== MOBILE BOTTOM BAR ===== */
-.bottomBar{ display:none; }
+/* ===== MOBILE ===== */
+.bottomBar{
+  display:none;
+}
 
 @media (max-width: 900px){
-  main{ grid-template-columns:1fr; }
-  .viewer{ min-height:auto; }
+  main{
+    grid-template-columns:1fr;
+  }
 }
 
 @media (max-width: 768px){
-  .topbar.brand img{
-    height: 64px;
-  }
-
-  /* Keep page scroll natural on mobile */
-  body{ padding-bottom: var(--bottomBarH); }
-
-  /* Reduce padding slightly on mobile to increase readable space */
-  .panel{ padding:10px; }
-  .card{ padding:10px; }
-  .sectionTitle{ font-size:16px; }
-
-  /* Turn OFF sticky overlay behavior on mobile (fixes the “floating bar” look) */
-  .panelRight{
+  /* Mobile uses page scroll only */
+  .panelLeft,
+  .panelRight,
+  .sectionsList,
+  .results{
     max-height:none;
     overflow:visible;
   }
-  .panelRight #answer{
-    overflow:visible;
-    padding-bottom:12px;
-  }
-  .panelRight #ttsControls{
-    position:static;
-    z-index:auto;
-    margin-top:10px;
-    border-top:1px solid rgba(255,255,255,.08);
-  }
 
-  /* Bottom bar */
   .bottomBar{
     display:flex;
     position:fixed;
@@ -255,11 +235,12 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
     padding:10px;
     border-radius:18px;
     border:1px solid rgba(255,255,255,.12);
-    background:rgba(20,32,48,85);
+    background:rgba(20,32,48,.85);
     backdrop-filter:blur(8px);
-    height: var(--bottomBarH);
-    padding-bottom: env(safe-area-inset-bottom);
+    height:var(--bottomBarH);
+    padding-bottom:env(safe-area-inset-bottom);
   }
+
   .bottomBtn{
     flex:1;
     padding:14px 12px;
@@ -267,149 +248,8 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
     font-weight:600;
     font-size:15px;
   }
-  .bottomBtn.primary{ flex:1.2; }
 }
 
 @media (prefers-reduced-motion: reduce){
   *{ scroll-behavior:auto; }
-}
-
-.pilot-access {
-  margin-top: 14px;
-}
-
-.pilot-access-btn {
-  display: block;
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 12px;
-  font-weight: 700;
-  text-align: center;
-  text-decoration: none;
-  background: #1a1a1a;
-  color: #fff;
-}
-
-.pilot-access-btn:hover {
-  opacity: 0.9;
-}
-
-.pilot-access-note {
-  margin-top: 10px;
-  font-size: 12px;
-  line-height: 1.35;
-  opacity: 0.85;
-}
-
-.pilot-access-support {
-  margin-top: 6px;
-  font-size: 12px;
-  opacity: 0.65;
-  text-align: center;
-}
-
-.pilot-access-title {
-  font-weight: 800;
-  margin-top: 8px;
-}
-
-.pilot-access-subtitle {
-  margin-top: 6px;
-  font-size: 12px;
-  line-height: 1.35;
-  opacity: 0.8;
-}
-
-.pilot-access-bullets {
-  margin: 8px 0 0;
-  padding-left: 18px;
-  font-size: 12px;
-  line-height: 1.35;
-  opacity: 0.85;
-}
-
-.pilot-access-bullets li {
-  margin: 4px 0;
-}
-
-.pilot-access-fineprint {
-  margin-top: 8px;
-  font-size: 11px;
-  line-height: 1.35;
-  opacity: 0.65;
-  text-align: center;
-}
-
-/* =========================
-   Search results: visible + scrollable (iOS-safe)
-   ========================= */
-
-/* Avoid “scroll trap” on iOS: let the whole left panel scroll */
-.panelLeft{
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Keep sections list from eating all space */
-.sectionsList{
-  flex: 0 0 auto;
-  max-height: 32vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Make results area its own scroll box and clearly visible */
-#searchResults{
-  max-height: 40vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  margin-top: 10px;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid #243348;
-  background: #0b0f14;
-}
-
-/* Make hits visually obvious */
-#searchResults .hit,
-#searchResults button{
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 12px;
-  margin: 8px 0;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.95);
-}
-
-/* Mobile bottom bar spacing should be mobile-only */
-@media (max-width: 768px){
-  body{
-    padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
-  }
-}
-
-/* ===== iOS/mobile: avoid nested scroll traps, but don't let lists become endless ===== */
-@media (max-width: 768px){
-
-  /* Keep the page scroll natural (no fixed max-height on the whole panel) */
-  .panelLeft{
-    max-height: none !important;
-    overflow: visible !important;
-  }
-
-  /* But constrain the big lists so they don't become infinite */
-  .sectionsList{
-    max-height: 45vh;          /* tweak 35–55vh to taste */
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  #searchResults{
-    max-height: 35vh;          /* tweak as desired */
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
 }
