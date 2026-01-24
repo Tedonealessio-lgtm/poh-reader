@@ -55,6 +55,30 @@ main{
   min-height:0;
 }
 
+/* Small helper text under headings */
+.sectionHint{
+  font-size:12px;
+  opacity:.72;
+  margin:-6px 0 10px 0;
+  line-height:1.35;
+}
+
+/* Generic card (used for Best Places etc.) */
+.card{
+  background: rgba(10, 14, 20, 0.55);
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:12px;
+  padding:12px;
+}
+
+.sectionTitle{
+  font-weight:700;
+  font-size:18px;
+  margin-bottom:6px;
+}
+
+.sectionMeta{ font-size:12px; opacity:.75; line-height:1.35; }
+
 /* ===== VIEWER ===== */
 .viewer{
   background:#0f1722;
@@ -75,7 +99,7 @@ canvas{
 input[type="text"], textarea, select{
   width:100%;
   padding:10px;
-  border-radius:8px;
+  border-radius:10px;
   border:1px solid #243348;
   background:#0b0f14;
   color:#e8eef7;
@@ -85,7 +109,7 @@ textarea{ resize:vertical; }
 /* ===== BUTTONS ===== */
 button{
   padding:8px 10px;
-  border-radius:8px;
+  border-radius:10px;
   border:1px solid #2a3d57;
   background:#162235;
   color:#e8eef7;
@@ -98,23 +122,30 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 .results{
   margin-top:10px;
   padding:8px;
-  border-radius:8px;
+  border-radius:10px;
   border:1px solid #243348;
   background:#0b0f14;
   max-height:40vh;
   overflow:auto;
 }
+
 .answer{
   margin-top:10px;
   white-space:pre-wrap;
   background:#0b0f14;
   border:1px solid #243348;
-  border-radius:8px;
-  padding:10px;
+  border-radius:12px;
+  padding:12px;
   min-height:120px;
+  line-height:1.35;
 }
 
-.sectionMeta{ font-size:12px; opacity:.75; }
+/* Simple one-line safety note (replaces the big repeating card) */
+.safetyLine{
+  margin-top:10px;
+  font-size:12px;
+  opacity:.75;
+}
 
 /* =========================
    LEFT PANEL: make lists scroll
@@ -164,6 +195,8 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   border-top:1px solid rgba(255,255,255,.08);
   padding:10px;
   padding-bottom:env(safe-area-inset-bottom);
+  border-radius:12px;
+  margin-top:10px;
 }
 
 /* ===== MOBILE BOTTOM BAR ===== */
@@ -178,7 +211,12 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   /* Keep page scroll natural on mobile */
   body{ padding-bottom: var(--bottomBarH); }
 
-  /* Turn OFF sticky overlay behavior on mobile (this fixes the “floating bar” look) */
+  /* Reduce padding slightly on mobile to increase readable space */
+  .panel{ padding:10px; }
+  .card{ padding:10px; }
+  .sectionTitle{ font-size:16px; }
+
+  /* Turn OFF sticky overlay behavior on mobile (fixes the “floating bar” look) */
   .panelRight{
     max-height:none;
     overflow:visible;
