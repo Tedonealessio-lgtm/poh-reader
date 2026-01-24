@@ -337,3 +337,19 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   opacity: 0.65;
   text-align: center;
 }
+
+:root{
+  --bottomBarH: 160px; /* adjust later if needed */
+}
+
+/* Add breathing room so content isn't hidden behind the fixed bottom bar */
+body{
+  padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
+}
+
+/* If panels scroll internally, also pad them */
+.panel,
+.panelLeft,
+.panelRight{
+  padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
+}
