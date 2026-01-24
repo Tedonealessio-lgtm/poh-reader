@@ -391,24 +391,25 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   }
 }
 
-/* ===== iOS/mobile: avoid nested scroll traps in LEFT panel ===== */
+/* ===== iOS/mobile: avoid nested scroll traps, but don't let lists become endless ===== */
 @media (max-width: 768px){
-  /* Let the page scroll naturally */
+
+  /* Keep the page scroll natural (no fixed max-height on the whole panel) */
   .panelLeft{
     max-height: none !important;
     overflow: visible !important;
   }
 
-  /* Don’t trap scroll inside sections/results */
+  /* But constrain the big lists so they don't become infinite */
   .sectionsList{
-    max-height: none !important;
-    overflow: visible !important;
+    max-height: 45vh;          /* tweak 35–55vh to taste */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-#searchResults{
-  max-height: 60vh !important;
-  min-height: 240px;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch;
- }
+  #searchResults{
+    max-height: 35vh;          /* tweak as desired */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
 }
