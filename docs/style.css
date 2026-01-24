@@ -298,3 +298,42 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   line-height: 1.35;
   opacity: 0.85;
 }
+
+.pilot-access-support {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.65;
+  text-align: center;
+}
+
+.pilot-access-title {
+  font-weight: 800;
+  margin-top: 8px;
+}
+
+.pilot-access-subtitle {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.35;
+  opacity: 0.8;
+}
+
+.pilot-access-bullets {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.35;
+  opacity: 0.85;
+}
+
+.pilot-access-bullets li {
+  margin: 4px 0;
+}
+
+.pilot-access-fineprint {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.35;
+  opacity: 0.65;
+  text-align: center;
+}
