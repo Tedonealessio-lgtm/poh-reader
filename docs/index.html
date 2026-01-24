@@ -111,17 +111,20 @@
 
       <hr />
 
-      <button id="readPageBtn">Read page</button>
-      <button id="readSectionBtn">Read section</button>
-      <button id="stopReadBtn">Stop</button>
+<div id="answer" class="answer"></div>
 
-      <!-- IMPORTANT: only ONE Resume button in the whole DOM -->
-      <button id="resumeReadBtn" disabled>Resume</button>
+<div id="ttsControls" class="ttsControls">
+  <button id="readPageBtn">Read page</button>
+  <button id="readSectionBtn">Read section</button>
+  <button id="stopReadBtn">Stop</button>
 
-      <label>Speed</label>
-      <input id="ttsRate" type="range" min="0.6" max="1.4" step="0.1" value="1" />
+  <!-- IMPORTANT: only ONE Resume button in the whole DOM -->
+  <button id="resumeReadBtn">Resume</button>
 
-      <select id="voiceSelect"></select>
+  <label>Speed</label>
+  <input id="ttsRate" type="range" min="0.6" max="1.4" step="0.1" value="1" />
+  <select id="voiceSelect"></select>
+</div>
 
       <div id="answer" class="answer"></div>
     </div>

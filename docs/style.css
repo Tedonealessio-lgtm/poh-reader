@@ -307,3 +307,58 @@ main { padding-bottom: var(--bottomBarH); }
   height: var(--bottomBarH);
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* ================================
+   STEP 1: Pin Read / Resume controls
+   ================================ */
+
+/* Right panel becomes a vertical layout */
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Keep the TTS control block visible */
+#readPageBtn,
+#readSectionBtn,
+#stopReadBtn,
+#resumeReadBtn {
+  flex-shrink: 0;
+}
+
+/* Make Ask/Answer scroll instead of pushing buttons */
+#answer {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+
+/* ===== STEP 1: Right panel layout (cards scroll, TTS controls pinned) ===== */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* critical for nested scrolling */
+}
+
+/* This is where Ask cards go — it must scroll */
+#answer {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 12px; /* small breathing space above controls */
+}
+
+/* The bottom TTS controls stay visible */
+#ttsControls {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255,255,255,.08);
+}
