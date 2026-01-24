@@ -156,12 +156,13 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
    LEFT PANEL: make lists scroll
    ========================= */
 .panelLeft{
-  display:flex;
-  flex-direction:column;
-  min-height:0;
-  max-height:100vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100vh;
   overflow-y: auto;
--webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 .sectionsList{
   flex:1 1 auto;
@@ -375,4 +376,22 @@ body{
   max-height: 40vh;
   overflow: auto;
   margin-bottom: 12px;
+}
+
+/* =========================
+   Search results visibility
+   ========================= */
+
+#searchResults .hit,
+#searchResults button,
+#searchResults a{
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  margin: 8px 0;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.95);
 }
