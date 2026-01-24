@@ -8,46 +8,6 @@ const $ = (id) => document.getElementById(id);
 const bs = document.getElementById("buildStamp");
 if (bs) bs.textContent = "build: " + new Date().toISOString();
 
-/* ===============================
-   BEST PLACES TAP HANDLER (iOS)
-   =============================== */
-
-const bestPlacesEl = document.getElementById("bestPlaces");
-
-function onBestPlaceTap(e) {
-  const t = (e.target && e.target.nodeType === 1) ? e.target : e.target?.parentElement;
-  const btn = t?.closest(".hitCard[data-page]");
-  if (!btn) return;
-
-  // CRITICAL: stop iOS text selection
-  e.preventDefault();
-  e.stopPropagation();
-
-  // visual proof (temporary)
-  btn.style.outline = "2px solid lime";
-  setTimeout(() => (btn.style.outline = ""), 300);
-
-  if (!pdfDoc) return;
-
-  const page = Number(btn.dataset.page);
-  if (!Number.isFinite(page)) return;
-
-    pageNum = Math.max(1, Math.min(page, pageCount));
-  renderPage(pageNum);
-  updateCurrentSectionFromPage?.();
-}
-
-// iOS needs touchend
-bestPlacesEl?.addEventListener("touchstart", onBestPlaceTap, {
-  passive: false,
-  capture: true,
-});
-
-// desktop fallback
-bestPlacesEl?.addEventListener("click", onBestPlaceTap, {
-  capture: true,
-});
-
 // =====================================================
 // IndexedDB (POH Library)
 // =====================================================
@@ -184,7 +144,7 @@ const feedbackBtn = $("feedbackBtn");
 const feedbackStatus = $("feedbackStatus");
 
 const sectionsBox = $("sections");
-const sectionFilter = $("sectionFilter"); // <input> filter
+const sectionFilter = $("sectionFilter");
 
 const searchInput = $("search");
 const searchBtn = $("searchBtn");
@@ -204,6 +164,10 @@ const stopReadBtn = $("stopReadBtn");
 const ttsRate = $("ttsRate");
 const voiceSelect = $("voiceSelect");
 
+// Best Places UI (must exist in index.html)
+const bestPlacesWrap = document.getElementById("bestPlacesWrap");
+const bestPlacesBox = document.getElementById("bestPlaces");
+
 // =====================================================
 // State
 // =====================================================
@@ -216,16 +180,16 @@ if (window.setEmptyStateVisible) window.setEmptyStateVisible(true);
 
 let currentPdfId = null;
 let currentPdfName = "";
-let restoredOnStartuped = false; // keep this name
+let restoredOnStartuped = false;
 
-let outlineItems = []; // {title, page, level}
-let sectionRanges = []; // [{title, start, end, level}]
+let outlineItems = [];
+let sectionRanges = [];
 let currentSectionIndex = -1;
 
-let pageTextCache = new Map(); // raw text cache (search)
-let pageTtsCache = new Map(); // cleaned text cache (audio)
+let pageTextCache = new Map();
+let pageTtsCache = new Map();
 
-let lastSearchHits = []; // [{page, text, context}]
+let lastSearchHits = [];
 let searchCancelToken = { cancel: false };
 
 // TTS
@@ -233,11 +197,9 @@ let voices = [];
 let ttsSpeaking = false;
 let ttsStartedByRead = false;
 
-// For resume (chunked)
 let lastReadProgress = null; // { page, key, offset, label, started? }
 if (resumeReadBtn) resumeReadBtn.disabled = true;
 
-// Stop/cancel tracking (so Stop keeps progress)
 let ttsWasCancelled = false;
 let ttsKeepProgressOnCancel = false;
 
@@ -272,15 +234,6 @@ function refreshResumeBtn() {
   updateResumeBtnState();
 }
 
-function cancelTtsSilently() {
-  try {
-    // cancel current speech without touching resume flags/state
-    if (window.speechSynthesis?.speaking || window.speechSynthesis?.pending) {
-      window.speechSynthesis.cancel();
-    }
-  } catch {}
-}
-
 function enableCoreInputs() {
   if (askInput) askInput.disabled = false;
   if (askBtn) askBtn.disabled = false;
@@ -302,34 +255,83 @@ function enablePdfDependentControls(enabled) {
 
   if (readHitsBtn) readHitsBtn.disabled = !enabled || lastSearchHits.length === 0;
 
-  // Always compute Resume from real rule
   refreshResumeBtn();
 }
 
+function escapeHtml(s) {
+  return String(s || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+// =====================================================
+// Best Places (ONE handler, safe on iOS)
+// =====================================================
+let bestPlacesHandlersAttached = false;
+
+function attachBestPlacesHandlersOnce() {
+  if (bestPlacesHandlersAttached) return;
+  if (!bestPlacesBox) return;
+
+  const onTap = async (e) => {
+    const btn = e.target?.closest?.(".bestPlaceBtn[data-page]");
+    if (!btn) return;
+
+    // stop iOS selection + stop duplicate clicks
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!pdfDoc) return;
+
+    const p = Number(btn.dataset.page);
+    if (!Number.isFinite(p)) return;
+
+    if (btn.dataset.read === "1") {
+      const t = await getPageTextForTts(p);
+      await speakChunked(
+        `Page ${p}. ${t || "No readable text found on this page."}`,
+        { page: p, label: "best-place" },
+        { resume: false }
+      );
+      return;
+    }
+
+    await goToPage(p);
+  };
+
+  bestPlacesBox.addEventListener("touchend", onTap, { passive: false, capture: true });
+  bestPlacesBox.addEventListener("click", onTap, { capture: true });
+
+  bestPlacesHandlersAttached = true;
+}
+
 function renderBestPlaces(places) {
-  window.renderBestPlaces = renderBestPlaces;
-  const wrap = document.getElementById("bestPlacesWrap");
-  const box = document.getElementById("bestPlaces");
+  const wrap = bestPlacesWrap;
+  const box = bestPlacesBox;
   if (!wrap || !box) return;
 
-  // places can be: [ {page, title?, score?}, ... ]  OR  [pageNumber, ...]
+  attachBestPlacesHandlersOnce();
+
   const norm = (places || [])
-    .map(p => {
+    .map((p) => {
       if (typeof p === "number") return { page: p };
       if (typeof p === "string") return { page: parseInt(p, 10) };
       return { ...p, page: parseInt(p.page, 10) };
     })
-    .filter(p => Number.isFinite(p.page));
+    .filter((p) => Number.isFinite(p.page));
 
-  // Stable ordering (avoid “random looking” changes)
   norm.sort((a, b) => {
     const as = Number.isFinite(a.score) ? a.score : 0;
     const bs = Number.isFinite(b.score) ? b.score : 0;
-    if (bs !== as) return bs - as;     // score desc
-    return a.page - b.page;            // page asc as tie-break
+    if (bs !== as) return bs - as;
+    return a.page - b.page;
   });
 
-  // Deduplicate pages
   const seen = new Set();
   const finalList = [];
   for (const p of norm) {
@@ -338,69 +340,32 @@ function renderBestPlaces(places) {
     finalList.push(p);
   }
 
-  if (finalList.length === 0) {
+  wrap.style.display = finalList.length ? "block" : "none";
+
+  if (!finalList.length) {
     box.innerHTML = `<div class="sectionMeta">No strong matches found.</div>`;
     return;
   }
 
-  // Render clickable rows
-  box.innerHTML = finalList
-    .slice(0, 8) // keep it readable on mobile
-    .map((p, idx) => {
-      const label = p.title ? `${p.title} (p.${p.page})` : `Page ${p.page}`;
-      return `
-       <button
-  class="hitCard"
-  type="button"
-  data-action="jump"
-  data-page="${p.page}"
-  style="
-    width:100%;
-    display:block;
-    text-align:left;
-    background:none;
-    border:none;
-    padding:12px;
-    margin-top:8px;
-  "
->
-
-// Bind handlers directly to the rendered Best Places buttons (iOS reliable)
-const bestBtns = box.querySelectorAll('button.hitCard[data-page]');
-bestBtns.forEach((btn) => {
-
-  const go = async (e) => {
-    // stop iOS turning tap into text selection / scroll gesture
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!pdfDoc) return;
-
-    const action = btn.dataset.action || "jump";
-    const page = Number(btn.dataset.page);
-    if (!Number.isFinite(page)) return;
-
-    pageNum = Math.max(1, Math.min(page, pageCount));
-    await renderPage(pageNum);
-
-    if (action === "jump") updateCurrentSectionFromPage();
-    if (action === "read") {
-      // later: hook TTS from here
-    }
-  };
-
-  // touchend is the key for iOS
-  btn.addEventListener("touchend", go, { passive: false });
-  // click as fallback for desktop
-  btn.addEventListener("click", go);
-});
-
-        </button>
-      `;
-    })
-    .join("");
+  box.innerHTML = finalList.slice(0, 8).map((h, idx) => {
+    const title = h.sectionTitle ? escapeHtml(h.sectionTitle) : "Relevant page";
+    const excerpt = h.excerpt ? escapeHtml(h.excerpt) : "";
+    return `
+      <div class="hitCard" style="margin-top:12px;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.10);">
+        <div style="font-weight:700;">${idx + 1}. ${title} <span style="opacity:.75;">(p.${h.page})</span></div>
+        ${excerpt ? `<div style="opacity:.85;font-size:12px;margin-top:8px;white-space:pre-wrap;">"${excerpt}"</div>` : ``}
+        <div style="display:flex;gap:10px;margin-top:10px;">
+          <button class="bestPlaceBtn" data-page="${h.page}">Jump</button>
+          <button class="bestPlaceBtn" data-page="${h.page}" data-read="1">Read from here</button>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
+// =====================================================
+// Rendering helpers
+// =====================================================
 function isRenderingCancelled(err) {
   return (
     err &&
@@ -418,17 +383,6 @@ async function cancelOngoingRender() {
   renderTask = null;
 }
 
-function escapeHtml(s) {
-  return String(s || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
-
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 // =====================================================
 // Sections filter
 // =====================================================
@@ -436,7 +390,6 @@ function applySectionsFilter() {
   if (!sectionsBox) return;
   const q = (sectionFilter?.value || "").trim().toLowerCase();
   const btns = sectionsBox.querySelectorAll("button.sectionBtn");
-
   btns.forEach((btn) => {
     const text = (btn.textContent || "").toLowerCase();
     btn.style.display = !q || text.includes(q) ? "" : "none";
@@ -488,7 +441,7 @@ async function getPageText(pageNumber1Based) {
   const tc = await page.getTextContent({ includeMarkedContent: true });
 
   const items = (tc.items || [])
-    .map(it => {
+    .map((it) => {
       const str = (it.str || "").replace(/\s+/g, " ").trim();
       if (!str) return null;
 
@@ -502,14 +455,12 @@ async function getPageText(pageNumber1Based) {
 
   if (!items.length) return "";
 
-  // Sort: top → bottom, left → right
   items.sort((a, b) => {
     const dy = b.y - a.y;
     if (Math.abs(dy) > 1.5) return dy;
     return a.x - b.x;
   });
 
-  // Group into visual lines
   const lines = [];
   let current = [];
   let currentY = items[0].y;
@@ -519,7 +470,7 @@ async function getPageText(pageNumber1Based) {
   for (const it of items) {
     if (!sameLine(it.y, currentY)) {
       current.sort((a, b) => a.x - b.x);
-      lines.push(current.map(w => w.str).join(" "));
+      lines.push(current.map((w) => w.str).join(" "));
       current = [];
       currentY = it.y;
     }
@@ -528,7 +479,7 @@ async function getPageText(pageNumber1Based) {
 
   if (current.length) {
     current.sort((a, b) => a.x - b.x);
-    lines.push(current.map(w => w.str).join(" "));
+    lines.push(current.map((w) => w.str).join(" "));
   }
 
   return lines.join("\n");
@@ -541,24 +492,19 @@ function cleanTtsText(text) {
   if (!text) return "";
 
   let t = String(text);
-
-  // Normalize spaces
   t = t.replace(/\s+/g, " ").trim();
 
-  // Remove common boilerplate patterns (Pilatus PC-12 footer style)
   const patterns = [
-    /\bissued\b\s*[:\-]?\s*[a-z]{3,9}\s+\d{1,2},\s+\d{4}/gi,              // Issued: September 15, 2006
-    /\brevision\b\s*\d+\s*[:\-]?\s*[a-z]{3,9}\s+\d{1,2},\s+\d{4}/gi,      // Revision 15: Nov 06, 2015
-    /\brevision\b\s*[:\-]?\s*\d{1,3}/gi,                                  // Revision: 15
-    /\brev\.?\b\s*[:\-]?\s*\d{1,3}/gi,                                    // Rev. 15
-    /\breport\s*(no|number)\b\s*[:\-]?\s*[0-9a-z\-/. ]{1,20}/gi,          // Report No: 02277
-    /\bdoc(ument)?\s*(no|number)\b\s*[:\-]?\s*[0-9a-z\-/. ]{1,25}/gi,     // Document No: ...
-    /\beffective\s*date\b\s*[:\-]?\s*[0-9a-z.,/ ]{1,25}/gi,               // Effective Date ...
-    /\bprint(ed)?\s*date\b\s*[:\-]?\s*[0-9a-z.,/ ]{1,25}/gi,              // Printed Date ...
-
-    // Page markers
-    /\bpage\s+\d+\s*(of\s+\d+)?\b/gi,                                     // Page 1 of 5
-    /\b\d{1,4}\s*[-–]\s*\d{1,4}\b/g,                                      // 1-5
+    /\bissued\b\s*[:\-]?\s*[a-z]{3,9}\s+\d{1,2},\s+\d{4}/gi,
+    /\brevision\b\s*\d+\s*[:\-]?\s*[a-z]{3,9}\s+\d{1,2},\s+\d{4}/gi,
+    /\brevision\b\s*[:\-]?\s*\d{1,3}/gi,
+    /\brev\.?\b\s*[:\-]?\s*\d{1,3}/gi,
+    /\breport\s*(no|number)\b\s*[:\-]?\s*[0-9a-z\-/. ]{1,20}/gi,
+    /\bdoc(ument)?\s*(no|number)\b\s*[:\-]?\s*[0-9a-z\-/. ]{1,25}/gi,
+    /\beffective\s*date\b\s*[:\-]?\s*[0-9a-z.,/ ]{1,25}/gi,
+    /\bprint(ed)?\s*date\b\s*[:\-]?\s*[0-9a-z.,/ ]{1,25}/gi,
+    /\bpage\s+\d+\s*(of\s+\d+)?\b/gi,
+    /\b\d{1,4}\s*[-–]\s*\d{1,4}\b/g,
   ];
 
   for (const rx of patterns) t = t.replace(rx, " ");
@@ -605,8 +551,8 @@ async function buildOutlineAndSections() {
     try {
       const resolved = typeof dest === "string" ? await pdfDoc.getDestination(dest) : dest;
       if (!resolved || !resolved[0]) return null;
-      const pageIndex = await pdfDoc.getPageIndex(resolved[0]); // 0-based
-      return pageIndex + 1; // 1-based
+      const pageIndex = await pdfDoc.getPageIndex(resolved[0]);
+      return pageIndex + 1;
     } catch {
       return null;
     }
@@ -622,11 +568,8 @@ async function buildOutlineAndSections() {
   }
 
   await walk(outline, 0);
-
-  // Sort by page to make ranges
   outlineItems.sort((a, b) => a.page - b.page);
 
-  // Build ranges
   for (let i = 0; i < outlineItems.length; i++) {
     const start = outlineItems[i].page;
     const end = i < outlineItems.length - 1 ? outlineItems[i + 1].page - 1 : pageCount;
@@ -638,7 +581,6 @@ async function buildOutlineAndSections() {
     });
   }
 
-  // Render Sections list
   if (sectionsBox) {
     sectionsBox.innerHTML = "";
     for (let i = 0; i < sectionRanges.length; i++) {
@@ -766,35 +708,21 @@ async function runSearch(query) {
 }
 
 // =====================================================
-// TTS (Voice Read) + REAL RESUME (chunked)
-// =====================================================
-// =====================================================
-// Voice mode + language detection (conservative)
+// TTS (chunked resume)
 // =====================================================
 let voiceMode = "english"; // "english" | "auto" | "manual"
-// Recommendation: keep "english" as default because POHs are English.
 
 function detectLangFast(text) {
   const t = (text || "").toLowerCase();
-
-  // Strong German signals
   const umlauts = (t.match(/[äöüß]/g) || []).length;
   if (umlauts >= 3) return "de";
 
-  // Token-based hints (conservative)
   const words = t.split(/\s+/).filter(Boolean);
   const sample = words.slice(0, 250);
-  if (sample.length < 40) return "en"; // too short -> don’t flip
+  if (sample.length < 40) return "en";
 
-  const germanSet = new Set([
-    "und","der","die","das","nicht","mit","für","ist","sind","ein","eine",
-    "bei","auf","zum","zur","im","am","aus","wird","werden"
-  ]);
-
-  const englishSet = new Set([
-    "the","and","of","to","in","for","is","are","with","on","as","be","by",
-    "this","that","from"
-  ]);
+  const germanSet = new Set(["und","der","die","das","nicht","mit","für","ist","sind","ein","eine","bei","auf","zum","zur","im","am","aus","wird","werden"]);
+  const englishSet = new Set(["the","and","of","to","in","for","is","are","with","on","as","be","by","this","that","from"]);
 
   let de = 0, en = 0;
   for (const w of sample) {
@@ -802,9 +730,7 @@ function detectLangFast(text) {
     if (englishSet.has(w)) en++;
   }
 
-  // Switch to German ONLY if clearly German (won’t trigger on POHs)
   if (de >= 6 && de >= en * 2) return "de";
-
   return "en";
 }
 
@@ -815,7 +741,6 @@ function pickBestVoiceForLang(lang) {
 
   const prefer = (rx) => pool.find(v => rx.test((v.name || "").toLowerCase()));
 
-  // Warmest first
   return (
     prefer(/siri/) ||
     prefer(/enhanced|premium|neural|natural/) ||
@@ -841,27 +766,20 @@ function refreshVoices() {
     voiceSelect.appendChild(opt);
   }
 
-  // Pick the most human-sounding voice we can find (English)
   const best = pickBestVoiceForLang("en");
   if (best) voiceSelect.value = best.name;
 }
 
-// stop speech; keepProgress=true allows next "Read" to resume
 function stopTts({ keepProgress = true } = {}) {
   try {
-    // Mark this as an intentional cancel (important for iOS)
     ttsWasCancelled = true;
     ttsKeepProgressOnCancel = keepProgress;
-
     window.speechSynthesis.cancel();
   } catch {}
 
   ttsSpeaking = false;
 
-  if (!keepProgress) {
-    lastReadProgress = null;
-  }
-
+  if (!keepProgress) lastReadProgress = null;
   updateResumeBtnState();
 }
 
@@ -879,13 +797,10 @@ function chunkText(text, maxLen = 220) {
 
   while (i < s.length) {
     let end = Math.min(i + maxLen, s.length);
-
-    // try not to cut in the middle of a word
     if (end < s.length) {
       const lastSpace = s.lastIndexOf(" ", end);
       if (lastSpace > i + 80) end = lastSpace;
     }
-
     chunks.push(s.slice(i, end).trim());
     i = end;
   }
@@ -894,8 +809,6 @@ function chunkText(text, maxLen = 220) {
 }
 
 async function speakChunked(text, { page, label } = {}, { resume = false } = {}) {
-  // Stop any current speech (keep progress)
-
   const cleaned = String(text || "").trim();
   if (!cleaned) return;
 
@@ -916,12 +829,9 @@ async function speakChunked(text, { page, label } = {}, { resume = false } = {})
 
   let v = null;
 
-  if (voiceMode === "manual") {
-    v = getSelectedVoice();
-  } else if (voiceMode === "english") {
-    v = pickBestVoiceForLang("en");
-  } else {
-    // auto (conservative)
+  if (voiceMode === "manual") v = getSelectedVoice();
+  else if (voiceMode === "english") v = pickBestVoiceForLang("en");
+  else {
     const lang = detectLangFast(cleaned);
     v = pickBestVoiceForLang(lang === "de" ? "de" : "en");
   }
@@ -936,46 +846,27 @@ async function speakChunked(text, { page, label } = {}, { resume = false } = {})
     }
 
     const chunk = chunks.shift();
-
     const u = new SpeechSynthesisUtterance(chunk);
     if (v) u.voice = v;
     u.rate = Number.isFinite(rate) ? rate : 1.0;
 
-    // IMPORTANT:
-    // Resume should become available even if user stops early,
-    // so we bump offset right when speaking starts (iOS/Chrome safe).
     u.onstart = () => {
-  // Mark that speech actually started (so Resume can be enabled)
-  if (lastReadProgress) {
-    lastReadProgress.started = true;
-
-    // Ensure Resume becomes available, but do NOT advance offset here
-    if ((lastReadProgress.offset || 0) === 0) {
-      lastReadProgress.offset = 1;
-    }
-
-    refreshResumeBtn();
-  }
-};
+      if (lastReadProgress) {
+        lastReadProgress.started = true;
+        if ((lastReadProgress.offset || 0) === 0) lastReadProgress.offset = 1;
+        refreshResumeBtn();
+      }
+    };
 
     u.onend = () => {
-      // iOS Safari: cancel() still fires onend
       if (ttsWasCancelled) {
         ttsWasCancelled = false;
-
-        // If stop was pressed, keep progress
-        if (!ttsKeepProgressOnCancel) {
-          lastReadProgress = null;
-        }
-
+        if (!ttsKeepProgressOnCancel) lastReadProgress = null;
         refreshResumeBtn();
         return;
       }
 
-      // normal end → advance offset
-      if (lastReadProgress) {
-        lastReadProgress.offset += chunk.length;
-      }
+      if (lastReadProgress) lastReadProgress.offset += chunk.length;
       refreshResumeBtn();
       speakNext();
     };
@@ -985,11 +876,10 @@ async function speakChunked(text, { page, label } = {}, { resume = false } = {})
       refreshResumeBtn();
     };
 
-    // Enable Resume immediately even if user stops before onstart fires
-if (lastReadProgress && (lastReadProgress.offset || 0) === 0) {
-  lastReadProgress.offset = 1;
-  refreshResumeBtn();
-}
+    if (lastReadProgress && (lastReadProgress.offset || 0) === 0) {
+      lastReadProgress.offset = 1;
+      refreshResumeBtn();
+    }
 
     window.speechSynthesis.speak(u);
   };
@@ -1006,7 +896,6 @@ async function resumeTts() {
   const text = await getPageTextForTts(p);
   const keyNow = makeTextKey(text);
 
-  // Strict safety: only resume if the text key matches
   const canResume =
     lastReadProgress &&
     lastReadProgress.page === p &&
@@ -1019,11 +908,7 @@ async function resumeTts() {
     { resume: !!canResume }
   );
 
-  // If we couldn't resume safely, reset progress to avoid confusion
-  if (!canResume && lastReadProgress) {
-    lastReadProgress.offset = 0;
-  }
-
+  if (!canResume && lastReadProgress) lastReadProgress.offset = 0;
   refreshResumeBtn();
 }
 
@@ -1056,8 +941,6 @@ async function readCurrentSection() {
   }
 
   const s = sectionRanges[idx];
-
-  // Safety cap for section reading
   const maxPages = 6;
   const end = Math.min(s.end, s.start + maxPages - 1);
 
@@ -1084,7 +967,6 @@ async function readSearchHits() {
   await speakChunked(combined.trim(), { page: lastSearchHits[0].page, label: "hits" }, { resume: false });
 }
 
-// Hint user when returning from background
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden && lastReadProgress?.page) {
     setLibraryStatus(`Audio paused. Press Read again to resume (page ${lastReadProgress.page}).`);
@@ -1118,7 +1000,7 @@ function setupSpeechRecognition() {
   recognition = new SR();
   recognition.lang = "en-US";
   recognition.interimResults = true;
-  recognition.continuous = false; // iOS-safe
+  recognition.continuous = false;
 
   recognition.onstart = () => setMicStatus("Listening…");
   recognition.onend = () => setMicStatus("Mic ready. Hold to talk.");
@@ -1149,20 +1031,16 @@ function setupSpeechRecognition() {
 
 function startListening() {
   if (!recognition) return;
-  try {
-    recognition.start();
-  } catch {}
+  try { recognition.start(); } catch {}
 }
 
 function stopListening() {
   if (!recognition) return;
-  try {
-    recognition.stop();
-  } catch {}
+  try { recognition.stop(); } catch {}
 }
 
 // =====================================================
-// "Ask" (Local mode) — FAST on 1300+ pages (incremental scan)
+// "Ask" (Local mode) — incremental scan
 // =====================================================
 const STOPWORDS = new Set([
   "the","a","an","and","or","to","of","in","on","for","with","at","from","by",
@@ -1217,7 +1095,6 @@ async function runLocalAskIncremental(question, { timeBudgetMs = 1200, maxReturn
 
   const qKey = tokens.join("|");
 
-  // Reset scan if new question
   if (!askScanState || askScanState.qKey !== qKey) {
     const titleScores = new Map();
     for (const s of (sectionRanges || [])) {
@@ -1234,7 +1111,6 @@ async function runLocalAskIncremental(question, { timeBudgetMs = 1200, maxReturn
       titleScores,
     };
 
-    // Add title-only results immediately
     for (const [p, s] of titleScores.entries()) {
       askScanState.results.push({
         page: p,
@@ -1251,7 +1127,7 @@ async function runLocalAskIncremental(question, { timeBudgetMs = 1200, maxReturn
   while (askScanState.nextPage <= endPage) {
     const p = askScanState.nextPage++;
 
-    const text = await getPageText(p); // raw for matching
+    const text = await getPageText(p);
     if (text) {
       const tl = text.toLowerCase();
       const tokenScore = countTokenHits(tl, tokens);
@@ -1283,7 +1159,6 @@ async function runLocalAskIncremental(question, { timeBudgetMs = 1200, maxReturn
 
   const sorted = [...askScanState.results].sort((a, b) => b.score - a.score);
 
-  // de-dup close pages
   const final = [];
   for (const r of sorted) {
     if (final.length >= maxReturn) break;
@@ -1294,33 +1169,6 @@ async function runLocalAskIncremental(question, { timeBudgetMs = 1200, maxReturn
   const done = askScanState.nextPage > endPage;
   return { hits: final, done };
 }
-
-// Click delegation for Ask result buttons
-askOutput?.addEventListener("click", async (e) => {
-  const btn = e.target?.closest?.("button[data-action]");
-  if (!btn) return;
-
-  const action = btn.dataset.action;
-  const page = Number(btn.dataset.page || "0");
-
-  if (action === "ask-more") {
-    await handleAsk(); // continues scan
-    return;
-  }
-
-  if (!page || !pdfDoc) return;
-
-  if (action === "jump") {
-    await goToPage(page);
-    return;
-  }
-
-  if (action === "read") {
-    const t = await getPageTextForTts(page);
-    await speakChunked(`Page ${page}. ${t || "No readable text found on this page."}`, { page, label: "ask-hit" }, { resume: false });
-    return;
-  }
-});
 
 async function handleAsk() {
   const q = (askInput?.value || "").trim();
@@ -1342,6 +1190,7 @@ async function handleAsk() {
          <div style="opacity:.8;margin-top:8px;">Try shorter keywords (e.g., “Vref”, “105”, “oil pressure”, “takeoff”).</div>
          <div style="opacity:.75;margin-top:10px;">Safety: Always verify in the official POH/AFM.</div>`;
     }
+    renderBestPlaces([]);
     return;
   }
 
@@ -1352,34 +1201,38 @@ async function handleAsk() {
 
   const cards = hits
     .map((h, idx) => {
+      if (!h || !Number.isFinite(Number(h.page))) return "";
       const title = h.sectionTitle ? escapeHtml(h.sectionTitle) : "Relevant page";
       const excerpt = h.excerpt ? escapeHtml(h.excerpt) : "";
       return `
         <div style="margin-top:12px;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.10);">
           <div style="font-weight:700;">${idx + 1}. ${title} <span style="opacity:.75;">(p.${h.page})</span></div>
           ${excerpt ? `<div style="opacity:.85;font-size:12px;margin-top:8px;white-space:pre-wrap;">"${excerpt}"</div>` : ``}
-          <div style="display:flex;gap:10px;margin-top:10px;">
-            <button data-action="jump" data-page="${h.page}">Jump</button>
-            <button data-action="read" data-page="${h.page}">Read from here</button>
-          </div>
-        </div>
-      `;
+        </div>`;
     })
     .join("");
 
   const moreBtn = done
     ? ""
     : `<div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
-         <button data-action="ask-more">Search more</button>
+         <button id="askMoreBtn">Search more</button>
          <span style="opacity:.75;font-size:12px;">Scanning… ${Math.min(askScanState?.nextPage || 1, pageCount)}/${pageCount}</span>
        </div>`;
 
   const footer = `<div style="opacity:.75;margin-top:12px;">Safety: Always verify in the official POH/AFM.</div>`;
 
-  if (askOutput) {
-     askOutput.innerHTML = header + cards + moreBtn + footer;
+  if (askOutput) askOutput.innerHTML = header + cards + moreBtn + footer;
+
+  // render small clickable cards in the right panel section
+  renderBestPlaces(hits);
+
+  // optional "Search more" button
+  const more = document.getElementById("askMoreBtn");
+  if (more) {
+    more.onclick = async () => {
+      await handleAsk();
+    };
   }
-     renderBestPlaces(hits);
 }
 
 // =====================================================
@@ -1428,7 +1281,7 @@ async function loadPdfFromBytes(bytes) {
 
   const task = pdfjsLib.getDocument({
     data,
-    standardFontDataUrl: "./standard_fonts/", // GitHub Pages-safe
+    standardFontDataUrl: "./standard_fonts/",
   });
 
   pdfDoc = await task.promise;
@@ -1442,7 +1295,6 @@ async function loadPdfFromBytes(bytes) {
   pageTtsCache.clear();
   clearSearchUI();
 
-  // Reset Ask scan state + Resume progress whenever a new PDF loads
   askScanState = null;
   lastReadProgress = null;
 
@@ -1493,7 +1345,6 @@ async function loadPdfFromFileAndSave(file) {
 
   await refreshLibrarySelectUI();
 
-  // Reload from IndexedDB (iOS-safe)
   const rec = await loadPdfFromLibrary(currentPdfId);
   if (!rec?.buffer) throw new Error("Saved record missing buffer");
 
@@ -1566,7 +1417,7 @@ async function copyFeedbackFlow() {
 // =====================================================
 fileInput?.addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
-  e.target.value = ""; // allow picking same file again
+  e.target.value = "";
   if (!file) return;
 
   if (file.type !== "application/pdf") {
@@ -1589,60 +1440,12 @@ fileInput?.addEventListener("change", async (e) => {
 
 prevBtn?.addEventListener("click", async () => {
   if (!pdfDoc || pageNum <= 1) return;
-  pageNum -= 1;
-  await renderPage(pageNum);
-  updateCurrentSectionFromPage();
+  await goToPage(pageNum - 1);
 });
 
 nextBtn?.addEventListener("click", async () => {
   if (!pdfDoc || pageNum >= pageCount) return;
-  pageNum += 1;
-  await renderPage(pageNum);
-  updateCurrentSectionFromPage();
-});
-
-// iOS: Best Places tap handler (touchend, capture) — works when click doesn’t fire
-document.addEventListener("touchend", async (e) => {
-  const btn = e.target.closest('button[data-action][data-page]');
-  if (!btn) return;
-
-  e.preventDefault();
-  e.stopPropagation();
-
-  if (!pdfDoc) return;
-
-  const action = btn.dataset.action;
-  const page = Number(btn.dataset.page);
-  if (!Number.isFinite(page)) return;
-
-  pageNum = Math.max(1, Math.min(page, pageCount));
-  await renderPage(pageNum);
-
-  if (action === "jump") updateCurrentSectionFromPage();
-  if (action === "read") {
-    // later: hook TTS from here
-  }
-}, { passive: false, capture: true });
-
-// iOS-safe click handler for Best Places cards (delegation)
-document.addEventListener("click", async (e) => {
-  const btn = e.target.closest('button[data-action][data-page]');
-  if (!btn || !pdfDoc) return;
-
-  const action = btn.dataset.action;
-  const page = Number(btn.dataset.page);
-  if (!Number.isFinite(page)) return;
-
-  pageNum = Math.max(1, Math.min(page, pageCount));
-  await renderPage(pageNum);
-
-  if (action === "jump") {
-    updateCurrentSectionFromPage();
-  }
-
-  if (action === "read") {
-    // later: hook TTS from here
-  }
+  await goToPage(pageNum + 1);
 });
 
 uploadBtn?.addEventListener("click", () => {
@@ -1661,7 +1464,6 @@ openFromLibraryBtn?.addEventListener("click", async () => {
     currentPdfName = rec.name || "";
 
     await openWithRetries(rec.buffer, { tries: 3, delayMs: 250 });
-
     setLibraryStatus("Opened ✅");
   } catch (err) {
     console.error(err);
@@ -1734,23 +1536,8 @@ readSectionBtn?.addEventListener("click", async () => {
 });
 
 stopReadBtn?.addEventListener("click", () => {
-  stopTts({ keepProgress: true }); // keep resume progress
+  stopTts({ keepProgress: true });
   refreshResumeBtn();
-});
-
-document.getElementById("bestPlaces")?.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-page]");
-  if (!btn) return;
-
-  const page = parseInt(btn.dataset.page, 10);
-  if (!Number.isFinite(page)) return;
-
-  // Jump to page
-  if (typeof gotoPage === "function") {
-    gotoPage(page);
-  } else if (window.__POH?.gotoPage) {
-    window.__POH.gotoPage(page);
-  }
 });
 
 resumeReadBtn?.addEventListener("click", async () => {
@@ -1821,20 +1608,17 @@ function cancelSearch() {
   searchCancelToken.cancel = true;
 }
 
-// --- Debug helpers (remove later if you want) ---
+// Debug helpers
 window.__POH = window.__POH || {};
 window.__POH.getPageTextForTts = getPageTextForTts;
 window.__POH.getProgress = () => ({ ...lastReadProgress });
 window.__POH.pageNum = () => pageNum;
 
 // Register Service Worker (GitHub Pages–safe)
-// // Register Service Worker (GitHub Pages-safe)
-// if ('serviceWorker' in navigator) {
-//   window.addEventListener('load', () => {
-//     navigator.serviceWorker.register('./sw.js')
-//       .then(reg => console.log('[SW] registered:', reg.scope))
-//       .catch(err => console.error('[SW] registration failed:', err));
-//   });
-// }
-
-window.renderBestPlaces = renderBestPlaces;
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js")
+      .then((reg) => console.log("[SW] registered:", reg.scope))
+      .catch((err) => console.error("[SW] registration failed:", err));
+  });
+}
