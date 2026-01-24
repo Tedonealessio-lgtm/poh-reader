@@ -674,8 +674,11 @@ async function runSearch(query) {
   }
 
   lastSearchHits = hits;
+  console.log("[SEARCH] hits length:", hits.length);
+console.log("[SEARCH] first hit:", hits[0]);
 
   if (!searchResults) return;
+  console.log("[SEARCH] searchResults exists, continuing render");
 
   if (!hits.length) {
     searchResults.innerHTML = `<div style="opacity:.7;font-size:12px;">No hits found.</div>`;
@@ -703,6 +706,9 @@ async function runSearch(query) {
 
   searchResults.innerHTML = "";
   searchResults.appendChild(wrap);
+  console.log("[SEARCH] searchResults children:", searchResults.children.length);
+console.log("[SEARCH] searchResults height:", searchResults.offsetHeight);
+console.log("[SEARCH] searchResults scrollHeight:", searchResults.scrollHeight);
 
   if (readHitsBtn) readHitsBtn.disabled = false;
 }
