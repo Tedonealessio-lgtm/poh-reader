@@ -146,7 +146,7 @@ const feedbackStatus = $("feedbackStatus");
 const sectionsBox = $("sections");
 const sectionFilter = $("sectionFilter");
 
-const searchInput = $("search");
+const searchInput = $("searchQuery");
 const searchBtn = $("searchBtn");
 const readHitsBtn = $("readHitsBtn");
 const searchResults = $("searchResults");
