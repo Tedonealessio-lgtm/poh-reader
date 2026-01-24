@@ -5,7 +5,7 @@
 
 body{
   margin:0;
-  background:#0b0f14;
+  background:#0e1622;
   color:#e8eef7;
 }
 
@@ -54,10 +54,10 @@ main{
 
 /* ===== PANELS (BASE) ===== */
 .panel{
-  background:#111925;
-  border:1px solid #1d2a3a;
-  border-radius:10px;
-  padding:12px;
+  background:#141f2d;   /* lighter than body */
+  border:1px solid #22344a;
+  border-radius:12px;
+  padding:14px;
   min-height:0;
 }
 
@@ -87,12 +87,11 @@ main{
 
 /* ===== VIEWER ===== */
 .viewer{
-  background:#0f1722;
-  border:1px solid #1d2a3a;
-  border-radius:10px;
+  background:#0c1420;   /* slightly darker, content well framed */
+  border:1px solid #22344a;
+  border-radius:12px;
   padding:12px;
   overflow:auto;
-  min-height:70vh;
 }
 canvas{
   width:100%;
@@ -215,7 +214,7 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 
 @media (max-width: 768px){
   .topbar.brand img{
-    height: 68px;
+    height: 64px;
   }
 
   /* Keep page scroll natural on mobile */
@@ -254,7 +253,7 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
     padding:10px;
     border-radius:18px;
     border:1px solid rgba(255,255,255,.12);
-    background:rgba(16,18,22,.9);
+    background:rgba(20,32,48,85);
     backdrop-filter:blur(8px);
     height: var(--bottomBarH);
     padding-bottom: env(safe-area-inset-bottom);
