@@ -1,68 +1,85 @@
-:root {
+:root{
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --bottomBarH: 130px;
 }
 
-body {
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body{
   margin: 0;
   background: #0b0f14;
   color: #e8eef7;
+
+  /* ✅ App layout */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 /* ===== TOP BAR ===== */
-.topbar {
+.topbar{
   padding: 12px 16px;
   border-bottom: 1px solid #1d2a3a;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  flex: 0 0 auto;
 }
 
-/* ===== BRAND / LOGO ===== */
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+/* ===== BRAND ===== */
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
-
-.brand img {
-  height: 36px;
-  width: auto;
-  display: block;
+.brand img{
+  height:36px;
+  width:auto;
+  display:block;
 }
-
-.brand span {
-  font-weight: 600;
-  letter-spacing: 1px;
-  font-size: 14px;
-  opacity: 0.9;
+.brand span{
+  font-weight:600;
+  letter-spacing:1px;
+  font-size:14px;
+  opacity:.9;
 }
 
 /* ===== LAYOUT ===== */
-main {
+main{
   display: grid;
   grid-template-columns: 320px 1fr 320px;
   gap: 12px;
   padding: 12px;
+
+  /* ✅ critical so inner panels can scroll */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
-.panel {
+/* ===== PANELS (BASE) ===== */
+.panel{
   background: #111925;
   border: 1px solid #1d2a3a;
   border-radius: 10px;
   padding: 12px;
+
+  /* ✅ allows nested scroll containers */
+  min-height: 0;
 }
 
-.viewer {
+/* ===== VIEWER ===== */
+.viewer{
   background: #0f1722;
   border: 1px solid #1d2a3a;
   border-radius: 10px;
   padding: 12px;
   overflow: auto;
-  min-height: 70vh;
+  min-height: 0;
 }
-
-canvas {
+canvas{
   width: 100%;
   height: auto;
   background: #fff;
@@ -70,50 +87,38 @@ canvas {
 }
 
 /* ===== ROW / CONTROLS ===== */
-.row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
+.row{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
 }
 
 /* ===== INPUTS ===== */
-input[type="text"],
-textarea,
-select {
-  width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #243348;
-  background: #0b0f14;
-  color: #e8eef7;
+input[type="text"], textarea, select{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #243348;
+  background:#0b0f14;
+  color:#e8eef7;
 }
-
-textarea {
-  resize: vertical;
-}
+textarea{ resize: vertical; }
 
 /* ===== BUTTONS ===== */
-button {
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #2a3d57;
-  background: #162235;
-  color: #e8eef7;
-  cursor: pointer;
+button{
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid #2a3d57;
+  background:#162235;
+  color:#e8eef7;
+  cursor:pointer;
 }
-
-button:hover:not(:disabled) {
-  background: #1d2f47;
-}
-
-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
+button:hover:not(:disabled){ background:#1d2f47; }
+button:disabled{ opacity:.45; cursor:not-allowed; }
 
 /* ===== RESULTS ===== */
-.results {
+.results{
   margin-top: 10px;
   padding: 8px;
   border-radius: 8px;
@@ -123,40 +128,42 @@ button:disabled {
   overflow: auto;
 }
 
-.hit,
-.sectionItem {
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #243348;
-  margin: 8px 0;
-  cursor: pointer;
+/* ===== LEFT PANEL: make list scroll ===== */
+.panelLeft{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+.sectionsList{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
-.hit:hover,
-.sectionItem:hover {
-  border-color: #3a5577;
+/* ===== RIGHT PANEL: scroll cards + pin TTS ===== */
+.panelRight{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
 }
 
-.snippet {
-  font-size: 12px;
-  opacity: 0.9;
+/* ✅ This is THE scroll container for cards */
+#rightScroll{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  /* give a little breathing room above the pinned bar */
+  padding-bottom: 16px;
 }
 
-.sectionMeta {
-  font-size: 12px;
-  opacity: 0.75;
-}
-
-mark {
-  padding: 0 2px;
-  border-radius: 3px;
-  background: #ffd54f;
-  color: #000;
-}
-
-/* ===== ANSWER BOX ===== */
-.answer {
-  margin-top: 10px;
+/* Answer box */
+.answer{
+  margin-top: 12px;
   white-space: pre-wrap;
   background: #0b0f14;
   border: 1px solid #243348;
@@ -165,59 +172,71 @@ mark {
   min-height: 120px;
 }
 
-/* ===== MOBILE / IPAD ===== */
-@media (max-width: 900px) {
-  main {
-    grid-template-columns: 1fr;
-  }
-
-  .viewer {
-    min-height: auto;
-  }
+/* Best Places card styling */
+.card{
+  border: 1px solid #243348;
+  border-radius: 10px;
+  background: rgba(11, 15, 20, 0.65);
+  padding: 10px;
+}
+.sectionTitle{
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.sectionMeta{
+  font-size: 12px;
+  opacity: .75;
 }
 
-/* ===== REDUCE MOTION (ONLY ANIMATION RELATED) ===== */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    scroll-behavior: auto;
-  }
+/* ✅ TTS pinned at bottom of RIGHT panel */
+#ttsControls{
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
+
+  background: rgba(16,18,22,0.95);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255,255,255,0.08);
+
+  padding: 10px;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
 }
 
 /* Hide native file input */
-.hiddenFile {
-  position: absolute;
-  left: -9999px;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
+.hiddenFile{
+  position:absolute;
+  left:-9999px;
+  width:1px;
+  height:1px;
+  opacity:0;
+}
+.uploadBtn{
+  font-weight:600;
+  border-radius:12px;
+  padding:10px 12px;
 }
 
-/* Upload button styling (desktop + tablet) */
-.uploadBtn {
-  font-weight: 600;
-  border-radius: 12px;
-  padding: 10px 12px;
+/* ===== MOBILE ===== */
+.bottomBar{ display:none; }
+
+@media (max-width: 900px){
+  main{ grid-template-columns: 1fr; }
 }
 
-/* MOBILE: bottom bar */
-.bottomBar {
-  display: none;
-}
-
-@media (max-width: 768px) {
-  /* Hide topbar upload + nav controls on mobile (we use bottom bar) */
+@media (max-width: 768px){
+  /* Hide desktop upload/nav controls (use bottom bar) */
   .topbar .uploadBtn,
-  .topbar .topControls {
-    display: none !important;
+  .topbar .navControls{
+    display:none !important;
   }
 
-  /* Add space so bottom bar doesn't cover content */
-  body {
-    padding-bottom: 78px;
+  body{
+    padding-bottom: var(--bottomBarH);
   }
 
-  .bottomBar {
-    display: flex;
+  .bottomBar{
+    display:flex;
     position: fixed;
     left: 10px;
     right: 10px;
@@ -227,138 +246,17 @@ mark {
 
     padding: 10px;
     border-radius: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(16, 18, 22, 0.85);
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(16,18,22,0.9);
     backdrop-filter: blur(8px);
   }
 
-  .bottomBtn {
-    flex: 1;
-    padding: 14px 12px;
-    border-radius: 14px;
-    font-weight: 600;
-    font-size: 15px;
+  .bottomBtn{
+    flex:1;
+    padding:14px 12px;
+    border-radius:14px;
+    font-weight:600;
+    font-size:15px;
   }
-
-  .bottomBtn.primary {
-    flex: 1.2; /* slightly bigger upload */
-  }
-}
-
-/* Make Sections list scroll instead of growing forever */
-.sectionsList {
-  padding-right: 6px;
-}
-
-/* (Optional but recommended) same for search results */
-.searchResults {
-  max-height: 35vh;
-  overflow: auto;
-}
-
-/* Ensure left panel itself does not grow infinitely */
-.panel {
-  max-height: 100vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Sections area must be the scroll container */
-.sectionsList {
-  flex: 1;
-  overflow-y: auto;
-}
-
-/* iOS Safari: ensure Best Places cards are tappable */
-#bestPlacesWrap,
-#bestPlaces {
-  pointer-events: auto;
-}
-
-#bestPlaces .hitCard {
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-  touch-action: manipulation;
-}
-
-/* iOS Safari: disable text selection for Best Places cards */
-#bestPlacesWrap,
-#bestPlacesWrap * {
-  -webkit-user-select: none !important;
-  user-select: none !important;
-  -webkit-touch-callout: none !important;
-}
-
-/* iOS Safari: allow Best Places to receive taps */
-#bestPlacesWrap {
-  position: relative;
-  z-index: 10;
-}
-
-/* --- iOS: fixed bottom bar must not cover content --- */
-:root { --bottomBarH: 130px; } /* tweak if needed */
-
-main { padding-bottom: var(--bottomBarH); }
-.panel { padding-bottom: var(--bottomBarH); }
-
-.bottomBar { 
-  height: var(--bottomBarH);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* ================================
-   STEP 1: Pin Read / Resume controls
-   ================================ */
-
-/* Right panel becomes a vertical layout */
-.panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-/* Keep the TTS control block visible */
-#readPageBtn,
-#readSectionBtn,
-#stopReadBtn,
-#resumeReadBtn {
-  flex-shrink: 0;
-}
-
-/* Make Ask/Answer scroll instead of pushing buttons */
-#answer {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  margin-top: 8px;
-}
-
-/* ===== STEP 1: Right panel layout (cards scroll, TTS controls pinned) ===== */
-
-.panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0; /* critical for nested scrolling */
-}
-
-/* This is where Ask cards go — it must scroll */
-#answer {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 12px; /* small breathing space above controls */
-}
-
-/* The bottom TTS controls stay visible */
-#ttsControls {
-  flex: 0 0 auto;
-  position: sticky;
-  bottom: 0;
-  padding-bottom: env(safe-area-inset-bottom);
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
-  border-top: 1px solid rgba(255,255,255,.08);
+  .bottomBtn.primary{ flex:1.2; }
 }

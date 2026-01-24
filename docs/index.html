@@ -37,9 +37,7 @@
   <!-- ================= WELCOME / EMPTY STATE ================= -->
   <div id="emptyState" class="panel" style="margin:12px;">
     <h2>POH Reader</h2>
-    <p>
-      Upload your POH / OM once, then quickly search and listen.
-    </p>
+    <p>Upload your POH / OM once, then quickly search and listen.</p>
     <ul>
       <li>Upload your aircraft POH or OM</li>
       <li>Search limitations and procedures</li>
@@ -54,7 +52,7 @@
   <!-- ================= MAIN LAYOUT ================= -->
   <main>
     <!-- LEFT PANEL -->
-    <div class="panel">
+    <div class="panel panelLeft">
       <h3>Library</h3>
       <select id="librarySelect"></select>
       <div class="row">
@@ -88,21 +86,11 @@
     </div>
 
     <!-- RIGHT PANEL -->
-    <div class="panel">
+    <div class="panel panelRight">
       <h3>Ask & Listen</h3>
-      <textarea
-        id="question"
-        placeholder="Ask a question (local mode)…"
-      ></textarea>
+
+      <textarea id="question" placeholder="Ask a question (local mode)…"></textarea>
       <button id="askBtn">Ask</button>
-      <div id="bestPlacesWrap" class="card" style="margin-top:12px;">
-  <div class="sectionTitle">
-    Best places to look
-    <span id="buildStamp" style="opacity:.5;font-size:12px;margin-left:8px;"></span>
-  </div>
-  <div class="sectionMeta">Offline mode: I’m pointing you to the most relevant pages.</div>
-  <div id="bestPlaces"></div>
-</div>
 
       <div class="row" style="margin-top:8px;">
         <button id="micBtn">🎤 Hold to talk</button>
@@ -111,22 +99,34 @@
 
       <hr />
 
-<div id="answer" class="answer"></div>
+      <!-- ✅ ONE scroll area that holds Best Places + Answer -->
+      <div id="rightScroll">
+        <div id="bestPlacesWrap" class="card" style="margin-top:12px;">
+          <div class="sectionTitle">
+            Best places to look
+            <span id="buildStamp" style="opacity:.5;font-size:12px;margin-left:8px;"></span>
+          </div>
+          <div class="sectionMeta">Offline mode: I'm pointing you to the most relevant pages.</div>
+          <div id="bestPlaces"></div>
+        </div>
 
-<div id="ttsControls" class="ttsControls">
-  <button id="readPageBtn">Read page</button>
-  <button id="readSectionBtn">Read section</button>
-  <button id="stopReadBtn">Stop</button>
+        <!-- ✅ ONLY ONE #answer in the whole file -->
+        <div id="answer" class="answer"></div>
+      </div>
 
-  <!-- IMPORTANT: only ONE Resume button in the whole DOM -->
-  <button id="resumeReadBtn">Resume</button>
+      <!-- ✅ Pinned controls live OUTSIDE the scroll area -->
+      <div id="ttsControls" class="ttsControls">
+        <button id="readPageBtn">Read page</button>
+        <button id="readSectionBtn">Read section</button>
+        <button id="stopReadBtn">Stop</button>
 
-  <label>Speed</label>
-  <input id="ttsRate" type="range" min="0.6" max="1.4" step="0.1" value="1" />
-  <select id="voiceSelect"></select>
-</div>
+        <!-- IMPORTANT: only ONE Resume button in the whole DOM -->
+        <button id="resumeReadBtn">Resume</button>
 
-      <div id="answer" class="answer"></div>
+        <label for="ttsRate">Speed</label>
+        <input id="ttsRate" type="range" min="0.6" max="1.4" step="0.1" value="1" />
+        <select id="voiceSelect"></select>
+      </div>
     </div>
   </main>
 
