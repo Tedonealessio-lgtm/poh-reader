@@ -405,8 +405,10 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
     overflow: visible !important;
   }
 
-  #searchResults{
-    max-height: none !important;
-    overflow: visible !important;
-  }
+#searchResults{
+  max-height: 60vh !important;
+  min-height: 240px;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+ }
 }
