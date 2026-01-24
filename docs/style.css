@@ -160,7 +160,8 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   flex-direction:column;
   min-height:0;
   max-height:100vh;
-  overflow:hidden;
+  overflow-y: auto;
+-webkit-overflow-scrolling: touch;
 }
 .sectionsList{
   flex:1 1 auto;
@@ -352,4 +353,26 @@ body{
 .panelLeft,
 .panelRight{
   padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
+}
+
+/* --- iOS bottom bar safe space so search results aren't hidden --- */
+:root{
+  --bottomBarH: 160px; /* tweak if needed */
+}
+
+/* Ensure panel contents can scroll and have room at bottom */
+.panelLeft{
+  padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
+}
+
+/* Optional: also apply to right panel if needed */
+.panelRight{
+  padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
+}
+
+/* Make results area visibly present + scroll if long */
+#searchResults{
+  max-height: 40vh;
+  overflow: auto;
+  margin-bottom: 12px;
 }
