@@ -25,7 +25,7 @@ body{
   gap:10px;
 }
 
-.topbar.brand img{
+.topbar .brand img{
   height: 48px;
   width:auto;
   display:block;
@@ -340,58 +340,53 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   text-align: center;
 }
 
-:root{
-  --bottomBarH: 160px; /* adjust later if needed */
-}
-
-/* Add breathing room so content isn't hidden behind the fixed bottom bar */
-body{
-  padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
-}
-
-/* If panels scroll internally, also pad them */
-.panel,
-.panelLeft,
-.panelRight{
-  padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
-}
-
-/* --- iOS bottom bar safe space so search results aren't hidden --- */
-:root{
-  --bottomBarH: 160px; /* tweak if needed */
-}
-
-/* Ensure panel contents can scroll and have room at bottom */
-.panelLeft{
-  padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
-}
-
-/* Optional: also apply to right panel if needed */
-.panelRight{
-  padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
-}
-
-/* Make results area visibly present + scroll if long */
-#searchResults{
-  max-height: 40vh;
-  overflow: auto;
-  margin-bottom: 12px;
-}
-
 /* =========================
-   Search results visibility
+   Search results: visible + scrollable (iOS-safe)
    ========================= */
 
+/* Avoid “scroll trap” on iOS: let the whole left panel scroll */
+.panelLeft{
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Keep sections list from eating all space */
+.sectionsList{
+  flex: 0 0 auto;
+  max-height: 32vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Make results area its own scroll box and clearly visible */
+#searchResults{
+  max-height: 40vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #243348;
+  background: #0b0f14;
+}
+
+/* Make hits visually obvious */
 #searchResults .hit,
-#searchResults button,
-#searchResults a{
+#searchResults button{
   display: block;
   width: 100%;
   text-align: left;
-  padding: 10px 12px;
+  padding: 12px;
   margin: 8px 0;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(255,255,255,0.06);
   color: rgba(255,255,255,0.95);
+}
+
+/* Mobile bottom bar spacing should be mobile-only */
+@media (max-width: 768px){
+  body{
+    padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
+  }
 }
