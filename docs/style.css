@@ -253,3 +253,56 @@ button:disabled{
 @media (prefers-reduced-motion: reduce){
   *{ scroll-behavior:auto; }
 }
+
+/* =========================
+   HOTFIX: iOS bottom bar + left panel
+   ========================= */
+
+/* 1) Keep LEFT PANEL content bounded (prevents "endless sections") */
+@media (max-width: 768px){
+  /* Make the left panel a bounded container */
+  .panelLeft{
+    max-height: calc(100vh - var(--bottomBarH) - 24px);
+    overflow: hidden;
+  }
+
+  /* Allow sections list + search results to scroll inside */
+  .sectionsList{
+    max-height: 32vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #searchResults{
+    max-height: 32vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* 2) Remove the "black cards" look from the bottom buttons */
+@media (max-width: 768px){
+  /* Make the bottom bar slim like native */
+  :root{ --bottomBarH: 86px; }
+
+  .bottomBar{
+    height: var(--bottomBarH);
+    padding: 10px 12px;
+  }
+
+  /* Buttons: small pills instead of giant cards */
+  .bottomBtn{
+    height: 52px;
+    padding: 0 12px;
+    border-radius: 16px;
+
+    /* remove heavy card look */
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.10);
+  }
+
+  .bottomBtn.primary{
+    font-weight: 700;
+    background: rgba(255,255,255,0.10);
+  }
+}
