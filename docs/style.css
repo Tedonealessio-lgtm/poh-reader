@@ -271,3 +271,30 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 @media (prefers-reduced-motion: reduce){
   *{ scroll-behavior:auto; }
 }
+
+.pilot-access {
+  margin-top: 14px;
+}
+
+.pilot-access-btn {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.pilot-access-btn:hover {
+  opacity: 0.9;
+}
+
+.pilot-access-note {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.35;
+  opacity: 0.85;
+}
