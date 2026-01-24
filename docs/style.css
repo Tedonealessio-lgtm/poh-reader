@@ -1,13 +1,12 @@
 :root{
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  --bottomBarH: 160px;
+  --bottomBarH: 88px; /* compact bottom bar */
 }
 
 body{
   margin:0;
   background:#0e1622;
   color:#e8eef7;
-  padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom));
 }
 
 /* ===== TOP BAR ===== */
@@ -28,6 +27,8 @@ body{
 
 .brand img{
   height:48px;
+  width:auto;
+  display:block;
 }
 
 .brand span{
@@ -37,16 +38,10 @@ body{
   opacity:.9;
 }
 
-.row{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  flex-wrap:wrap;
-}
+.row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 
 .hiddenFile{
-  position:absolute;
-  left:-9999px;
+  position:absolute; left:-9999px; width:1px; height:1px; opacity:0;
 }
 
 .uploadBtn{
@@ -63,7 +58,7 @@ main{
   padding:12px;
 }
 
-/* ===== PANELS ===== */
+/* ===== PANELS (BASE) ===== */
 .panel{
   background:#141f2d;
   border:1px solid #22344a;
@@ -72,7 +67,7 @@ main{
   min-height:0;
 }
 
-/* ===== TEXT HELPERS ===== */
+/* helper text */
 .sectionHint{
   font-size:12px;
   opacity:.72;
@@ -80,17 +75,7 @@ main{
   line-height:1.35;
 }
 
-.sectionTitle{
-  font-weight:700;
-  font-size:18px;
-  margin-bottom:6px;
-}
-
-.sectionMeta{
-  font-size:12px;
-  opacity:.75;
-  line-height:1.35;
-}
+.sectionMeta{ font-size:12px; opacity:.75; line-height:1.35; }
 
 /* ===== VIEWER ===== */
 .viewer{
@@ -100,17 +85,15 @@ main{
   padding:12px;
   overflow:auto;
 }
-
 canvas{
   width:100%;
+  height:auto;
   background:#fff;
   border-radius:6px;
 }
 
 /* ===== INPUTS ===== */
-input[type="text"],
-textarea,
-select{
+input[type="text"], textarea, select{
   width:100%;
   padding:10px;
   border-radius:10px;
@@ -118,8 +101,13 @@ select{
   background:#0b0f14;
   color:#e8eef7;
 }
-
 textarea{ resize:vertical; }
+
+/* Make <select> readable on iOS */
+select{
+  -webkit-appearance: none;
+  appearance: none;
+}
 
 /* ===== BUTTONS ===== */
 button{
@@ -130,29 +118,10 @@ button{
   color:#e8eef7;
   cursor:pointer;
 }
+button:hover:not(:disabled){ background:#1d2f47; }
+button:disabled{ opacity:.45; cursor:not-allowed; }
 
-button:hover:not(:disabled){
-  background:#1d2f47;
-}
-
-button:disabled{
-  opacity:.45;
-  cursor:not-allowed;
-}
-
-/* ===== LEFT PANEL (DESKTOP) ===== */
-.panelLeft{
-  display:flex;
-  flex-direction:column;
-}
-
-.sectionsList{
-  max-height:40vh;
-  overflow-y:auto;
-  padding-right:6px;
-}
-
-/* ===== SEARCH RESULTS ===== */
+/* ===== RESULTS / ANSWER ===== */
 .results{
   margin-top:10px;
   padding:8px;
@@ -160,23 +129,7 @@ button:disabled{
   border:1px solid #243348;
   background:#0b0f14;
   max-height:40vh;
-  overflow-y:auto;
-}
-
-#searchResults .hit,
-#searchResults div{
-  display:block;
-  padding:10px 12px;
-  margin:8px 0;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,0.12);
-  background:rgba(255,255,255,0.06);
-}
-
-/* ===== RIGHT PANEL ===== */
-.panelRight{
-  display:flex;
-  flex-direction:column;
+  overflow:auto;
 }
 
 .answer{
@@ -196,113 +149,136 @@ button:disabled{
   opacity:.75;
 }
 
-/* ===== TTS CONTROLS ===== */
-#ttsControls{
-  margin-top:10px;
-  padding:10px;
-  border-top:1px solid rgba(255,255,255,.08);
+/* =========================
+   LEFT PANEL: keep sections + results contained (NO endless list)
+   ========================= */
+.panelLeft{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  max-height:100vh;
+  overflow:hidden; /* key: prevents “endless” */
 }
 
-/* ===== MOBILE ===== */
-.bottomBar{
-  display:none;
+.sectionsList{
+  flex:0 0 auto;
+  max-height:38vh;         /* key: sections box stays bounded */
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  padding-right:6px;
+  margin-bottom:10px;
 }
+
+/* Search results also bounded */
+#searchResults{
+  max-height:32vh;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+}
+
+/* =========================
+   RIGHT PANEL (desktop)
+   ========================= */
+.panelRight{
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  max-height:100vh;
+  overflow:hidden;
+}
+
+.panelRight #answer{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:12px;
+}
+
+.panelRight #ttsControls{
+  flex:0 0 auto;
+  position:sticky;
+  bottom:0;
+  z-index:50;
+  background:rgba(16,18,22,.95);
+  backdrop-filter:blur(8px);
+  border-top:1px solid rgba(255,255,255,.08);
+  padding:10px;
+  padding-bottom:env(safe-area-inset-bottom);
+  border-radius:12px;
+  margin-top:10px;
+}
+
+/* ===== MOBILE BOTTOM BAR ===== */
+.bottomBar{ display:none; }
 
 @media (max-width: 900px){
-  main{
-    grid-template-columns:1fr;
-  }
+  main{ grid-template-columns:1fr; }
 }
 
 @media (max-width: 768px){
-  /* Mobile uses page scroll only */
-  .panelLeft,
-  .panelRight,
-  .sectionsList,
-  .results{
+  /* Give the page space for the bottom bar */
+  body{ padding-bottom: calc(var(--bottomBarH) + env(safe-area-inset-bottom)); }
+
+  .panel{ padding:12px; }
+
+  /* Mobile: don’t trap scroll in the RIGHT panel */
+  .panelRight{
     max-height:none;
     overflow:visible;
   }
+  .panelRight #answer{
+    overflow:visible;
+    padding-bottom:12px;
+  }
+  .panelRight #ttsControls{
+    position:static;
+    z-index:auto;
+    margin-top:10px;
+  }
 
+  /* Keep LEFT panel clean + NOT endless */
+  .panelLeft{
+    max-height:none;
+    overflow:visible;
+  }
+  .sectionsList{
+    max-height:34vh; /* still bounded */
+  }
+  #searchResults{
+    max-height:28vh; /* still bounded */
+  }
+
+  /* Bottom bar: remove “black cards” look (smaller + lighter) */
   .bottomBar{
     display:flex;
     position:fixed;
-    left:10px;
-    right:10px;
-    bottom:10px;
+    left:12px;
+    right:12px;
+    bottom:12px;
     gap:10px;
     z-index:9999;
     padding:10px;
     border-radius:18px;
-    border:1px solid rgba(255,255,255,.12);
-    background:rgba(20,32,48,.85);
-    backdrop-filter:blur(8px);
-    height:var(--bottomBarH);
-    padding-bottom:env(safe-area-inset-bottom);
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(20,32,48,0.55); /* correct alpha */
+    backdrop-filter: blur(10px);
+    height: var(--bottomBarH);
+    align-items:center;
   }
 
   .bottomBtn{
     flex:1;
-    padding:14px 12px;
-    border-radius:14px;
+    height:56px;
+    border-radius:16px;
     font-weight:600;
     font-size:15px;
+    background: rgba(255,255,255,0.06); /* no big dark cards */
+    border: 1px solid rgba(255,255,255,0.10);
   }
+  .bottomBtn.primary{ flex:1.2; }
 }
 
 @media (prefers-reduced-motion: reduce){
   *{ scroll-behavior:auto; }
-}
-
-/* =========================
-   HOTFIX: iOS bottom bar + left panel
-   ========================= */
-
-/* 1) Keep LEFT PANEL content bounded (prevents "endless sections") */
-@media (max-width: 768px){
-  /* Make the left panel a bounded container */
-  .panelLeft{
-    max-height: calc(100vh - var(--bottomBarH) - 24px);
-    overflow: hidden;
-  }
-
-  /* Allow sections list + search results to scroll inside */
-  .sectionsList{
-    max-height: 32vh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  #searchResults{
-    max-height: 32vh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-}
-
-/* 2) Remove the "black cards" look from the bottom buttons */
-@media (max-width: 768px){
-  /* Make the bottom bar slim like native */
-  :root{ --bottomBarH: 86px; }
-
-  .bottomBar{
-    height: var(--bottomBarH);
-    padding: 10px 12px;
-  }
-
-  /* Buttons: small pills instead of giant cards */
-  .bottomBtn{
-    height: 52px;
-    padding: 0 12px;
-    border-radius: 16px;
-
-    /* remove heavy card look */
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.10);
-  }
-
-  .bottomBtn.primary{
-    font-weight: 700;
-    background: rgba(255,255,255,0.10);
-  }
 }
