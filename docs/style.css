@@ -357,3 +357,43 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 .bestPlaces {
   padding-bottom: 24px;
 }
+
+/* === FIX: bottom bar should be a dock overlay (not part of scroll) === */
+:root{
+  --bottomDockH: 96px; /* adjust if needed */
+}
+
+/* The bar container (use your real id/class if different) */
+#bottomBar, .bottomBar, .bottom-nav, .bottomNav {
+  position: fixed !important;
+  left: 12px;
+  right: 12px;
+  bottom: 18px;
+  z-index: 9999;
+
+  /* look */
+  border-radius: 22px;
+  background: rgba(20, 25, 35, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.10);
+
+  /* make it feel less “card-like” */
+  padding: 12px;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.45);
+}
+
+/* Ensure content doesn’t get hidden under the dock */
+body {
+  padding-bottom: calc(var(--bottomDockH) + env(safe-area-inset-bottom)) !important;
+}
+
+/* If your main scrolling container is not body, pad that too */
+#app, .app, .container, .main, #main {
+  padding-bottom: calc(var(--bottomDockH) + env(safe-area-inset-bottom)) !important;
+}
+
+/* iOS: avoid “home bar” overlap */
+#bottomBar, .bottomBar, .bottom-nav, .bottomNav {
+  bottom: calc(18px + env(safe-area-inset-bottom)) !important;
+}
