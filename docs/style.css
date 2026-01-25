@@ -282,3 +282,10 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 @media (prefers-reduced-motion: reduce){
   *{ scroll-behavior:auto; }
 }
+
+/* ===== MOBILE: hide bottom bar while TTS controls are visible ===== */
+@media (max-width: 768px){
+  body.tts-active .bottomBar{
+    display: none !important;
+  }
+}
