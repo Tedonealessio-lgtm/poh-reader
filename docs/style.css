@@ -289,3 +289,36 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
     display: none !important;
   }
 }
+
+/* --- FIX: bottom black cards looking like content --- */
+
+/* Bottom action bar container */
+.bottomBar,
+.bottom-bar,
+#bottomBar {
+  background: linear-gradient(
+    to top,
+    rgba(10,15,25,0.92),
+    rgba(10,15,25,0.75),
+    rgba(10,15,25,0)
+  ) !important;
+
+  padding-top: 10px !important;
+  padding-bottom: 8px !important;
+  box-shadow: none !important;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Individual buttons inside bottom bar */
+.bottomBar button,
+.bottom-bar button {
+  background: rgba(255,255,255,0.08) !important;
+  box-shadow: none !important;
+}
+
+/* Make sure content does NOT look scrollable under it */
+.mainContent,
+#mainContent,
+.viewerWrap {
+  padding-bottom: 90px !important; /* space for bar, but not scroll bait */
+}
