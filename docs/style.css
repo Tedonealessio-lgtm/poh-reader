@@ -322,3 +322,38 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 .viewerWrap {
   padding-bottom: 90px !important; /* space for bar, but not scroll bait */
 }
+
+/* --- FIX: Ask result cards looking like endless content --- */
+
+/* Ask & Listen result container */
+.askResults,
+.ask-result,
+.bestPlaces,
+#bestPlaces {
+  margin-bottom: 16px !important;
+}
+
+/* Individual result cards */
+.askResults .card,
+.bestPlaces .card,
+.askResults > div,
+.bestPlaces > div {
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: none !important;
+  padding: 14px 14px !important;
+  margin-bottom: 12px !important;
+}
+
+/* Clamp preview text so it doesn't feel infinite */
+.askResults .card p,
+.bestPlaces .card p {
+  max-height: 6.5em;
+  overflow: hidden;
+}
+
+/* Clear separation from bottom bar */
+.askResults,
+.bestPlaces {
+  padding-bottom: 24px;
+}
