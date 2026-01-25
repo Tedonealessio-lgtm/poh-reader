@@ -876,19 +876,24 @@ async function speakChunked(text, { page, label } = {}, { resume = false } = {})
     };
 
     u.onend = () => {
-      if (ttsWasCancelled) {
-        ttsWasCancelled = false;
-        if (!ttsKeepProgressOnCancel) lastReadProgress = null;
-        refreshResumeBtn();
-        return;
-      }
 
-      if (lastReadProgress) lastReadProgress.offset += chunk.length;
-      refreshResumeBtn();
-      speakNext();
-    };
+  // ✅ always unhide the bottom bar when an utterance finishes
+  document.body.classList.remove("tts-active");
+
+  if (ttsWasCancelled) {
+    ttsWasCancelled = false;
+    if (!ttsKeepProgressOnCancel) lastReadProgress = null;
+    refreshResumeBtn();
+    return;
+  }
+
+  if (lastReadProgress) lastReadProgress.offset += chunk.length;
+  refreshResumeBtn();
+  speakNext();
+};
 
     u.onerror = () => {
+      document.body.classList.remove("tts-active");
       ttsSpeaking = false;
       refreshResumeBtn();
     };
@@ -898,6 +903,7 @@ async function speakChunked(text, { page, label } = {}, { resume = false } = {})
       refreshResumeBtn();
     }
 
+    document.body.classList.add("tts-active");
     window.speechSynthesis.speak(u);
   };
 
@@ -1554,6 +1560,7 @@ readSectionBtn?.addEventListener("click", async () => {
 
 stopReadBtn?.addEventListener("click", () => {
   stopTts({ keepProgress: true });
+  document.body.classList.remove("tts-active"); // ✅ ADD THIS
   refreshResumeBtn();
 });
 
