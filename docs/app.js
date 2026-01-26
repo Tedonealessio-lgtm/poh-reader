@@ -5,7 +5,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "./pdf.worker.min.mjs";
 
 const $ = (id) => document.getElementById(id);
 
-const bs = document.getElementById("buildStamp");
+// Build stamp (optional)
+const bs = $("buildStamp");
 if (bs) bs.textContent = "build: " + new Date().toISOString();
 
 // =====================================================
@@ -86,14 +87,7 @@ async function idbClear(storeName) {
 }
 
 async function savePdfToLibrary({ id, name, size, lastModified, buffer }) {
-  await idbPut(STORE_PDFS, {
-    id,
-    name,
-    size,
-    lastModified,
-    buffer, // ArrayBuffer
-    savedAt: Date.now(),
-  });
+  await idbPut(STORE_PDFS, { id, name, size, lastModified, buffer, savedAt: Date.now() });
   await idbPut(STORE_META, { key: "lastPdfId", value: id });
   return id;
 }
@@ -105,9 +99,7 @@ async function loadPdfFromLibrary(id) {
 async function deletePdfFromLibrary(id) {
   await idbDelete(STORE_PDFS, id);
   const meta = await idbGet(STORE_META, "lastPdfId");
-  if (meta?.value === id) {
-    await idbPut(STORE_META, { key: "lastPdfId", value: "" });
-  }
+  if (meta?.value === id) await idbPut(STORE_META, { key: "lastPdfId", value: "" });
 }
 
 async function clearLibrary() {
@@ -123,17 +115,16 @@ async function getLastPdfFromLibrary() {
 
 // =====================================================
 // UI refs (MATCH YOUR index.html IDs)
-
+// =====================================================
 const fileInput = $("file");
-const uploadBtn = $("uploadBtn");
+const uploadBtn = $("uploadBtn"); // optional / can exist
 const canvas = $("canvas");
 const ctx = canvas?.getContext("2d");
-
 const pageInfo = $("pageInfo");
 
 // Bottom dock buttons
-const bottomPrevBtn   = $("bottomPrev");
-const bottomNextBtn   = $("bottomNext");
+const bottomPrevBtn = $("bottomPrev");
+const bottomNextBtn = $("bottomNext");
 const bottomUploadBtn = $("bottomUpload");
 const bottomSearchBtn = $("bottomSearch");
 
@@ -170,23 +161,6 @@ const stopReadBtn = $("stopReadBtn");
 const resumeReadBtn = $("resumeReadBtn");
 const voiceSelect = $("voiceSelect");
 const speedRange = $("speedRange");
-// -----------------------------------------------------
-// Aliases (so older code doesn't crash)
-// -----------------------------------------------------
-const askInput  = questionEl;   // Ask textbox
-const askOutput = answerEl;     // Ask output area
-
-const sectionsBox = sectionsList; // sections container
-
-const ttsRate = speedRange;     // speed slider
-
-// Optional elements (only if they exist in HTML)
-const prevBtn = $("prev");      // top-bar prev (if present)
-const nextBtn = $("next");      // top-bar next (if present)
-
-const readHitsBtn = $("readHitsBtn");     // if you have it in HTML
-const searchStatus = $("searchStatus");   // if you have it in HTML
-const feedbackStatus = $("feedbackStatus"); // if you have it in HTML
 
 // =====================================================
 // State
@@ -196,18 +170,16 @@ let pageNum = 1;
 let pageCount = 0;
 let renderTask = null;
 
-if (window.setEmptyStateVisible) window.setEmptyStateVisible(true);
-
 let currentPdfId = null;
 let currentPdfName = "";
-let restoredOnStartuped = false;
+let restoredOnStartup = false;
 
 let outlineItems = [];
 let sectionRanges = [];
 let currentSectionIndex = -1;
 
-let pageTextCache = new Map();
-let pageTtsCache = new Map();
+let pageTextCache = new Map(); // raw extracted text (for search/ask)
+let pageTtsCache = new Map();  // cleaned text (for TTS)
 
 let lastSearchHits = [];
 let searchCancelToken = { cancel: false };
@@ -215,23 +187,17 @@ let searchCancelToken = { cancel: false };
 // TTS
 let voices = [];
 let ttsSpeaking = false;
-let ttsStartedByRead = false;
-
 let lastReadProgress = null; // { page, key, offset, label, started? }
-if (resumeReadBtn) resumeReadBtn.disabled = true;
-
 let ttsWasCancelled = false;
 let ttsKeepProgressOnCancel = false;
 
-// ====================================================
+if (resumeReadBtn) resumeReadBtn.disabled = true;
+
+// =====================================================
 // Helpers / UI
 // =====================================================
 function setLibraryStatus(msg) {
   if (libraryStatus) libraryStatus.textContent = msg || "";
-}
-
-function setFeedbackStatus(msg) {
-  if (feedbackStatus) feedbackStatus.textContent = msg || "";
 }
 
 function setMicStatus(msg) {
@@ -239,7 +205,8 @@ function setMicStatus(msg) {
 }
 
 function setPageInfo() {
-  if (pageInfo) pageInfo.textContent = pdfDoc ? `Page: ${pageNum} / ${pageCount}` : "Page: – / –";
+  if (!pageInfo) return;
+  pageInfo.textContent = pdfDoc ? `Page: ${pageNum} / ${pageCount}` : "Page: – / –";
 }
 
 function updateResumeBtnState() {
@@ -254,26 +221,27 @@ function refreshResumeBtn() {
   updateResumeBtnState();
 }
 
-function enableCoreInputs() {
-  if (askInput) askInput.disabled = false;
-  if (askBtn) askBtn.disabled = false;
-}
-
 function enablePdfDependentControls(enabled) {
-  if (prevBtn) prevBtn.disabled = !enabled;
-  if (nextBtn) nextBtn.disabled = !enabled;
+  // bottom nav
+  if (bottomPrevBtn) bottomPrevBtn.disabled = !enabled;
+  if (bottomNextBtn) bottomNextBtn.disabled = !enabled;
+  if (bottomSearchBtn) bottomSearchBtn.disabled = !enabled;
 
+  // sections/search
   if (sectionFilter) sectionFilter.disabled = !enabled;
   if (searchInput) searchInput.disabled = !enabled;
   if (searchBtn) searchBtn.disabled = !enabled;
 
+  // ask
+  if (questionEl) questionEl.disabled = !enabled;
+  if (askBtn) askBtn.disabled = !enabled;
+
+  // tts
   if (readPageBtn) readPageBtn.disabled = !enabled;
   if (readSectionBtn) readSectionBtn.disabled = !enabled;
   if (stopReadBtn) stopReadBtn.disabled = !enabled;
-  if (ttsRate) ttsRate.disabled = !enabled;
+  if (speedRange) speedRange.disabled = !enabled;
   if (voiceSelect) voiceSelect.disabled = !enabled;
-
-  if (readHitsBtn) readHitsBtn.disabled = !enabled || lastSearchHits.length === 0;
 
   refreshResumeBtn();
 }
@@ -287,79 +255,6 @@ function escapeHtml(s) {
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
-}
-
-// =====================================================
-// Best Places (ONE handler, safe on iOS)
-// =====================================================
-let bestPlacesHandlersAttached = false;
-
-function attachBestPlacesHandlersOnce() {
-  if (bestPlacesHandlersAttached) return;
-  if (!bestPlacesBox) return;
-
-  function renderBestPlaces(hits) {
-  if (!bestPlacesWrap || !bestPlacesBox) return;
-
-  attachBestPlacesHandlersOnce();
-
-  const list = Array.isArray(hits) ? hits : [];
-  if (!list.length) {
-    bestPlacesWrap.style.display = "none";
-    bestPlacesBox.innerHTML = "";
-    return;
-  }
-
-  bestPlacesWrap.style.display = "block";
-
-  bestPlacesBox.innerHTML = list.slice(0, 7).map((h, idx) => {
-    const title = escapeHtml(h.sectionTitle || "Relevant page");
-    const excerpt = escapeHtml(h.excerpt || "");
-    const page = Number(h.page || 1);
-
-    return `
-      <div class="hitCard" style="margin-top:12px;padding:10px;border-radius:12px;">
-        <div style="font-weight:700;">${idx + 1}. ${title}</div>
-        ${excerpt ? `<div style="opacity:.85;font-size:12px;margin-top:6px;">${excerpt}</div>` : ""}
-        <div style="display:flex;gap:10px;margin-top:10px;">
-          <button class="bestPlaceBtn" data-page="${page}">Jump</button>
-          <button class="bestPlaceBtn" data-page="${page}" data-read="1">Read from here</button>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
-  const onTap = async (e) => {
-    const btn = e.target?.closest?.(".bestPlaceBtn[data-page]");
-    if (!btn) return;
-
-    // stop iOS selection + stop duplicate clicks
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!pdfDoc) return;
-
-    const p = Number(btn.dataset.page);
-    if (!Number.isFinite(p)) return;
-
-    if (btn.dataset.read === "1") {
-      const t = await getPageTextForTts(p);
-      await speakChunked(
-        `Page ${p}. ${t || "No readable text found on this page."}`,
-        { page: p, label: "best-place" },
-        { resume: false }
-      );
-      return;
-    }
-
-    await goToPage(p);
-  };
-
-  bestPlacesBox.addEventListener("touchend", onTap, { passive: false, capture: true });
-  bestPlacesBox.addEventListener("click", onTap, { capture: true });
-
-  bestPlacesHandlersAttached = true;
 }
 
 // =====================================================
@@ -380,19 +275,6 @@ async function cancelOngoingRender() {
     await renderTask.promise.catch(() => {});
   } catch {}
   renderTask = null;
-}
-
-// =====================================================
-// Sections filter
-// =====================================================
-function applySectionsFilter() {
-  if (!sectionsBox) return;
-  const q = (sectionFilter?.value || "").trim().toLowerCase();
-  const btns = sectionsBox.querySelectorAll("button.sectionBtn");
-  btns.forEach((btn) => {
-    const text = (btn.textContent || "").toLowerCase();
-    btn.style.display = !q || text.includes(q) ? "" : "none";
-  });
 }
 
 // =====================================================
@@ -431,10 +313,11 @@ async function goToPage(p) {
 }
 
 // =====================================================
-// Text extraction (raw for search)
+// Text extraction (raw for Search + Ask)
 // =====================================================
 async function getPageText(pageNumber1Based) {
   if (!pdfDoc) return "";
+  if (pageTextCache.has(pageNumber1Based)) return pageTextCache.get(pageNumber1Based);
 
   const page = await pdfDoc.getPage(pageNumber1Based);
   const tc = await page.getTextContent({ includeMarkedContent: true });
@@ -452,8 +335,12 @@ async function getPageText(pageNumber1Based) {
     })
     .filter(Boolean);
 
-  if (!items.length) return "";
+  if (!items.length) {
+    pageTextCache.set(pageNumber1Based, "");
+    return "";
+  }
 
+  // Sort visually: top-to-bottom (y desc), then left-to-right (x asc)
   items.sort((a, b) => {
     const dy = b.y - a.y;
     if (Math.abs(dy) > 1.5) return dy;
@@ -481,7 +368,9 @@ async function getPageText(pageNumber1Based) {
     lines.push(current.map((w) => w.str).join(" "));
   }
 
-  return lines.join("\n");
+  const result = lines.join("\n");
+  pageTextCache.set(pageNumber1Based, result);
+  return result;
 }
 
 // =====================================================
@@ -489,9 +378,7 @@ async function getPageText(pageNumber1Based) {
 // =====================================================
 function cleanTtsText(text) {
   if (!text) return "";
-
-  let t = String(text);
-  t = t.replace(/\s+/g, " ").trim();
+  let t = String(text).replace(/\s+/g, " ").trim();
 
   const patterns = [
     /\bissued\b\s*[:\-]?\s*[a-z]{3,9}\s+\d{1,2},\s+\d{4}/gi,
@@ -507,7 +394,6 @@ function cleanTtsText(text) {
   ];
 
   for (const rx of patterns) t = t.replace(rx, " ");
-
   return t.replace(/\s{2,}/g, " ").trim();
 }
 
@@ -540,8 +426,8 @@ async function buildOutlineAndSections() {
   }
 
   if (!outline || !outline.length) {
-    if (sectionsBox) {
-      sectionsBox.innerHTML = `<div style="opacity:.7;font-size:12px;">No outline found in this PDF.</div>`;
+    if (sectionsList) {
+      sectionsList.innerHTML = `<div style="opacity:.7;font-size:12px;">No outline found in this PDF.</div>`;
     }
     return;
   }
@@ -580,18 +466,16 @@ async function buildOutlineAndSections() {
     });
   }
 
-  if (sectionsBox) {
-    sectionsBox.innerHTML = "";
+  if (sectionsList) {
+    sectionsList.innerHTML = "";
+
     for (let i = 0; i < sectionRanges.length; i++) {
       const s = sectionRanges[i];
+
       const btn = document.createElement("button");
+      btn.className = "sectionBtn";
       btn.style.width = "100%";
       btn.style.textAlign = "left";
-      btn.style.margin = "6px 0";
-      btn.style.padding = "10px";
-      btn.style.borderRadius = "10px";
-      btn.style.cursor = "pointer";
-      btn.className = "sectionBtn";
 
       const indent = s.level ? "&nbsp;".repeat(Math.min(6, s.level) * 2) : "";
       btn.innerHTML = `${indent}${escapeHtml(s.title)} <span style="opacity:.7;">(p.${s.start})</span>`;
@@ -601,13 +485,23 @@ async function buildOutlineAndSections() {
         await goToPage(s.start);
       });
 
-      sectionsBox.appendChild(btn);
+      sectionsList.appendChild(btn);
     }
 
     applySectionsFilter();
   }
 
   updateCurrentSectionFromPage();
+}
+
+function applySectionsFilter() {
+  if (!sectionsList) return;
+  const q = (sectionFilter?.value || "").trim().toLowerCase();
+  const btns = sectionsList.querySelectorAll("button.sectionBtn");
+  btns.forEach((btn) => {
+    const text = (btn.textContent || "").toLowerCase();
+    btn.style.display = !q || text.includes(q) ? "" : "none";
+  });
 }
 
 function updateCurrentSectionFromPage() {
@@ -623,12 +517,11 @@ function getSectionForPage(p) {
 }
 
 // =====================================================
-// Search
+// Search (exact)
 // =====================================================
 function clearSearchUI() {
   lastSearchHits = [];
   if (searchResults) searchResults.innerHTML = "";
-  if (readHitsBtn) readHitsBtn.disabled = true;
 }
 
 async function runSearch(query) {
@@ -639,426 +532,134 @@ async function runSearch(query) {
   clearSearchUI();
   searchCancelToken.cancel = false;
 
-  const startPage = 1;
-  const endPage = pageCount;
-
   const maxHits = 60;
   const hits = [];
 
   if (searchResults) {
-    searchResults.innerHTML = `<div style="opacity:.7;font-size:12px;">Searching pages ${startPage}–${endPage}…</div>`;
-  }
-  if (searchStatus) {
-    searchStatus.textContent = `Searching page ${startPage}/${pageCount}…`;
+    searchResults.innerHTML = `<div style="opacity:.7;font-size:12px;">Searching…</div>`;
   }
 
-  for (let p = startPage; p <= endPage; p++) {
+  const ql = q.toLowerCase();
+
+  for (let p = 1; p <= pageCount; p++) {
     if (searchCancelToken.cancel) break;
 
     const text = await getPageText(p);
     if (text) {
-      const pos = text.toLowerCase().indexOf(q.toLowerCase());
+      const tl = text.toLowerCase();
+      const pos = tl.indexOf(ql);
       if (pos >= 0) {
         const left = Math.max(0, pos - 80);
         const right = Math.min(text.length, pos + q.length + 120);
         const context = text.slice(left, right);
-        hits.push({ page: p, context, text });
+        hits.push({ page: p, context });
         if (hits.length >= maxHits) break;
       }
     }
 
-    // progress update every 10 pages
-    if (p % 10 === 0) {
-      if (searchStatus) {
-        searchStatus.textContent = `Searching page ${p}/${pageCount}…`;
-      }
-      await sleep(0);
-    }
-  } // ✅ closes FOR loop
+    if (p % 12 === 0) await sleep(0);
+  }
 
   lastSearchHits = hits;
-
-  console.log("[SEARCH] hits length:", hits.length);
-  console.log("[SEARCH] first hit:", hits[0]);
 
   if (!searchResults) return;
 
   if (!hits.length) {
     searchResults.innerHTML = `<div style="opacity:.7;font-size:12px;">No hits found.</div>`;
-    if (readHitsBtn) readHitsBtn.disabled = true;
-    if (searchStatus) searchStatus.textContent = "No hits found.";
     return;
-  }
-
-  if (searchStatus) {
-    searchStatus.textContent = `Found ${hits.length} hit(s).`;
   }
 
   const wrap = document.createElement("div");
 
   for (const h of hits) {
     const item = document.createElement("div");
-    item.className = "hit"; // ✅ lets CSS style it
+    item.className = "hit";
     item.innerHTML = `
       <div style="font-weight:600;">Page ${h.page}</div>
-      <div style="opacity:.8;font-size:12px;margin-top:6px;">
-        ${escapeHtml(h.context)}
-      </div>
+      <div style="opacity:.8;font-size:12px;margin-top:6px;">${escapeHtml(h.context)}</div>
     `;
-
     item.addEventListener("click", async () => {
       await goToPage(h.page);
     });
-
     wrap.appendChild(item);
   }
 
   searchResults.innerHTML = "";
   searchResults.appendChild(wrap);
-
-  console.log("[SEARCH] searchResults children:", searchResults.children.length);
-  console.log("[SEARCH] searchResults height:", searchResults.offsetHeight);
-  console.log("[SEARCH] searchResults scrollHeight:", searchResults.scrollHeight);
-
-  if (readHitsBtn) readHitsBtn.disabled = false;
-} // ✅ closes runSearch
+}
 
 // =====================================================
-// TTS (chunked resume)
+// Best Places cards (Jump / Read from here)
 // =====================================================
-let voiceMode = "english"; // "english" | "auto" | "manual"
+let bestPlacesHandlersAttached = false;
 
-function detectLangFast(text) {
-  const t = (text || "").toLowerCase();
-  const umlauts = (t.match(/[äöüß]/g) || []).length;
-  if (umlauts >= 3) return "de";
+function attachBestPlacesHandlersOnce() {
+  if (bestPlacesHandlersAttached) return;
+  if (!bestPlacesBox) return;
 
-  const words = t.split(/\s+/).filter(Boolean);
-  const sample = words.slice(0, 250);
-  if (sample.length < 40) return "en";
+  const onTap = async (e) => {
+    const btn = e.target?.closest?.(".bestPlaceBtn[data-page]");
+    if (!btn) return;
 
-  const germanSet = new Set(["und","der","die","das","nicht","mit","für","ist","sind","ein","eine","bei","auf","zum","zur","im","am","aus","wird","werden"]);
-  const englishSet = new Set(["the","and","of","to","in","for","is","are","with","on","as","be","by","this","that","from"]);
+    e.preventDefault();
+    e.stopPropagation();
 
-  let de = 0, en = 0;
-  for (const w of sample) {
-    if (germanSet.has(w)) de++;
-    if (englishSet.has(w)) en++;
-  }
+    if (!pdfDoc) return;
 
-  if (de >= 6 && de >= en * 2) return "de";
-  return "en";
-}
+    const p = Number(btn.dataset.page);
+    if (!Number.isFinite(p)) return;
 
-function pickBestVoiceForLang(lang) {
-  const l = (lang || "en").toLowerCase();
-  const candidates = voices.filter(v => (v.lang || "").toLowerCase().startsWith(l));
-  const pool = candidates.length ? candidates : voices;
-
-  const prefer = (rx) => pool.find(v => rx.test((v.name || "").toLowerCase()));
-
-  return (
-    prefer(/siri/) ||
-    prefer(/enhanced|premium|neural|natural/) ||
-    pool[0] ||
-    null
-  );
-}
-
-function getSelectedVoice() {
-  const name = voiceSelect?.value || "";
-  return voices.find((v) => v.name === name) || null;
-}
-
-function refreshVoices() {
-  voices = window.speechSynthesis?.getVoices?.() || [];
-  if (!voiceSelect) return;
-
-  voiceSelect.innerHTML = "";
-  for (const v of voices) {
-    const opt = document.createElement("option");
-    opt.value = v.name;
-    opt.textContent = `${v.name} (${v.lang})`;
-    voiceSelect.appendChild(opt);
-  }
-
-  const best = pickBestVoiceForLang("en");
-  if (best) voiceSelect.value = best.name;
-}
-
-function stopTts({ keepProgress = true } = {}) {
-  try {
-    ttsWasCancelled = true;
-    ttsKeepProgressOnCancel = keepProgress;
-    window.speechSynthesis.cancel();
-  } catch {}
-
-  ttsSpeaking = false;
-
-  if (!keepProgress) lastReadProgress = null;
-  updateResumeBtnState();
-}
-
-function makeTextKey(text) {
-  const s = String(text || "");
-  return `${s.length}:${s.slice(0, 40)}:${s.slice(-40)}`;
-}
-
-function chunkText(text, maxLen = 220) {
-  const s = String(text || "").trim();
-  if (!s) return [];
-
-  const chunks = [];
-  let i = 0;
-
-  while (i < s.length) {
-    let end = Math.min(i + maxLen, s.length);
-    if (end < s.length) {
-      const lastSpace = s.lastIndexOf(" ", end);
-      if (lastSpace > i + 80) end = lastSpace;
-    }
-    chunks.push(s.slice(i, end).trim());
-    i = end;
-  }
-
-  return chunks.filter(Boolean);
-}
-
-async function speakChunked(text, { page, label } = {}, { resume = false } = {}) {
-  const cleaned = String(text || "").trim();
-  if (!cleaned) return;
-
-  const key = makeTextKey(cleaned);
-
-  let offset = 0;
-  if (resume && lastReadProgress && lastReadProgress.page === page && lastReadProgress.key === key) {
-    offset = Math.max(0, lastReadProgress.offset || 0);
-  }
-
-  const remaining = cleaned.slice(offset);
-  const chunks = chunkText(remaining, 220);
-  if (!chunks.length) return;
-
-  ttsSpeaking = true;
-  lastReadProgress = { page, key, offset, label, started: false };
-  refreshResumeBtn();
-
-  let v = null;
-
-  if (voiceMode === "manual") v = getSelectedVoice();
-  else if (voiceMode === "english") v = pickBestVoiceForLang("en");
-  else {
-    const lang = detectLangFast(cleaned);
-    v = pickBestVoiceForLang(lang === "de" ? "de" : "en");
-  }
-
-  const rate = Number(ttsRate?.value || 1.0);
-
-  const speakNext = () => {
-    if (!chunks.length) {
-      ttsSpeaking = false;
-      refreshResumeBtn();
+    if (btn.dataset.read === "1") {
+      const t = await getPageTextForTts(p);
+      await speakChunked(
+        `Page ${p}. ${t || "No readable text found on this page."}`,
+        { page: p, label: "best-place" },
+        { resume: false }
+      );
       return;
     }
 
-    const chunk = chunks.shift();
-    const u = new SpeechSynthesisUtterance(chunk);
-    if (v) u.voice = v;
-    u.rate = Number.isFinite(rate) ? rate : 1.0;
-
-    u.onstart = () => {
-      if (lastReadProgress) {
-        lastReadProgress.started = true;
-        if ((lastReadProgress.offset || 0) === 0) lastReadProgress.offset = 1;
-        refreshResumeBtn();
-      }
-    };
-
-    u.onend = () => {
-
-  // ✅ always unhide the bottom bar when an utterance finishes
-  document.body.classList.remove("tts-active");
-
-  if (ttsWasCancelled) {
-    ttsWasCancelled = false;
-    if (!ttsKeepProgressOnCancel) lastReadProgress = null;
-    refreshResumeBtn();
-    return;
-  }
-
-  if (lastReadProgress) lastReadProgress.offset += chunk.length;
-  refreshResumeBtn();
-  speakNext();
-};
-
-    u.onerror = () => {
-      document.body.classList.remove("tts-active");
-      ttsSpeaking = false;
-      refreshResumeBtn();
-    };
-
-    if (lastReadProgress && (lastReadProgress.offset || 0) === 0) {
-      lastReadProgress.offset = 1;
-      refreshResumeBtn();
-    }
-
-    document.body.classList.add("tts-active");
-    window.speechSynthesis.speak(u);
+    await goToPage(p);
   };
 
-  speakNext();
+  bestPlacesBox.addEventListener("touchend", onTap, { passive: false, capture: true });
+  bestPlacesBox.addEventListener("click", onTap, { capture: true });
+
+  bestPlacesHandlersAttached = true;
 }
 
-async function resumeTts() {
-  if (!pdfDoc || !lastReadProgress) return;
+function renderBestPlaces(hits) {
+  if (!bestPlacesWrap || !bestPlacesBox) return;
 
-  const p = lastReadProgress.page;
-  await goToPage(p);
-
-  const text = await getPageTextForTts(p);
-  const keyNow = makeTextKey(text);
-
-  const canResume =
-    lastReadProgress &&
-    lastReadProgress.page === p &&
-    lastReadProgress.key === keyNow &&
-    (lastReadProgress.offset || 0) > 0;
-
-  await speakChunked(
-    text || "No readable text found on this page.",
-    { page: p, label: lastReadProgress.label || "page" },
-    { resume: !!canResume }
-  );
-
-  if (!canResume && lastReadProgress) lastReadProgress.offset = 0;
-  refreshResumeBtn();
-}
-
-async function readCurrentPage() {
-  if (!pdfDoc) return;
-  const text = await getPageTextForTts(pageNum);
-
-  const canResume =
-    lastReadProgress &&
-    lastReadProgress.page === pageNum &&
-    lastReadProgress.key === makeTextKey(text) &&
-    (lastReadProgress.offset || 0) > 0;
-
-  ttsStartedByRead = true;
-
-  await speakChunked(
-    text || "No readable text found on this page.",
-    { page: pageNum, label: "page" },
-    { resume: !!canResume }
-  );
-}
-
-async function readCurrentSection() {
-  if (!pdfDoc) return;
-
-  let idx = currentSectionIndex;
-  if (idx < 0 || !sectionRanges[idx]) {
-    await readCurrentPage();
+  const list = Array.isArray(hits) ? hits : [];
+  if (!list.length) {
+    bestPlacesWrap.style.display = "none";
+    bestPlacesBox.innerHTML = "";
     return;
   }
 
-  const s = sectionRanges[idx];
-  const maxPages = 6;
-  const end = Math.min(s.end, s.start + maxPages - 1);
+  bestPlacesWrap.style.display = "block";
+  attachBestPlacesHandlersOnce();
 
-  let combined = `Section: ${s.title}. Pages ${s.start} to ${end}. `;
-  for (let p = s.start; p <= end; p++) {
-    const t = await getPageTextForTts(p);
-    if (t) combined += " " + t;
-    await sleep(0);
-  }
+  bestPlacesBox.innerHTML = list
+    .map((h, idx) => {
+      const title = escapeHtml(h.sectionTitle || "Best place to look");
+      const excerpt = escapeHtml(h.excerpt || "");
+      const page = Number(h.page || 1);
 
-  await speakChunked(combined.trim(), { page: s.start, label: "section" }, { resume: false });
-}
-
-async function readSearchHits() {
-  if (!lastSearchHits.length) return;
-
-  let combined = `Reading ${Math.min(lastSearchHits.length, 10)} search hits. `;
-  const limit = Math.min(lastSearchHits.length, 10);
-  for (let i = 0; i < limit; i++) {
-    const h = lastSearchHits[i];
-    combined += ` Hit ${i + 1}, page ${h.page}. ${cleanTtsText(h.context)}. `;
-  }
-
-  await speakChunked(combined.trim(), { page: lastSearchHits[0].page, label: "hits" }, { resume: false });
-}
-
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && lastReadProgress?.page) {
-    setLibraryStatus(`Audio paused. Press Read again to resume (page ${lastReadProgress.page}).`);
-  }
-});
-
-// =====================================================
-// Mic (Hold-to-talk)
-// =====================================================
-let recognition = null;
-let micReady = false;
-let isHolding = false;
-
-async function ensureMicPermission() {
-  try {
-    await navigator.mediaDevices.getUserMedia({ audio: true });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function setupSpeechRecognition() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    setMicStatus("Mic not supported in this browser.");
-    if (micBtn) micBtn.disabled = true;
-    return;
-  }
-
-  recognition = new SR();
-  recognition.lang = "en-US";
-  recognition.interimResults = true;
-  recognition.continuous = false;
-
-  recognition.onstart = () => setMicStatus("Listening…");
-  recognition.onend = () => setMicStatus("Mic ready. Hold to talk.");
-  recognition.onerror = (e) => setMicStatus(`Mic error: ${e?.error || "unknown"}`);
-
-  recognition.onresult = (event) => {
-    let transcript = "";
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      transcript += event.results[i][0].transcript;
-    }
-    transcript = transcript.trim();
-    if (!transcript) return;
-
-    const last = event.results[event.results.length - 1];
-    if (last.isFinal) {
-      if (askInput) {
-        askInput.value = transcript;
-        askInput.focus();
-      }
-      setMicStatus(`Heard: "${transcript}"`);
-    } else {
-      setMicStatus(`Listening… "${transcript}"`);
-    }
-  };
-
-  micReady = true;
-}
-
-function startListening() {
-  if (!recognition) return;
-  try { recognition.start(); } catch {}
-}
-
-function stopListening() {
-  if (!recognition) return;
-  try { recognition.stop(); } catch {}
+      return `
+        <div class="bestPlaceCard">
+          <div class="bestPlaceTitle">${idx + 1}. ${title}</div>
+          ${excerpt ? `<div class="bestPlaceExcerpt">${excerpt}</div>` : ""}
+          <div class="bestPlaceActions">
+            <button class="bestPlaceBtn" data-page="${page}" data-read="0">Jump</button>
+            <button class="bestPlaceBtn" data-page="${page}" data-read="1">Read from here</button>
+            <div class="bestPlaceMeta">p.${page}</div>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
 }
 
 // =====================================================
@@ -1119,6 +720,7 @@ async function runLocalAskIncremental(question, { timeBudgetMs = 1200, maxReturn
 
   if (!askScanState || askScanState.qKey !== qKey) {
     const titleScores = new Map();
+
     for (const s of (sectionRanges || [])) {
       const tl = (s.title || "").toLowerCase();
       let score = 0;
@@ -1144,11 +746,9 @@ async function runLocalAskIncremental(question, { timeBudgetMs = 1200, maxReturn
   }
 
   const start = performance.now();
-  const endPage = pageCount;
 
-  while (askScanState.nextPage <= endPage) {
+  while (askScanState.nextPage <= pageCount) {
     const p = askScanState.nextPage++;
-    askScanState.scannedPages = p;
 
     const text = await getPageText(p);
     if (text) {
@@ -1189,26 +789,27 @@ async function runLocalAskIncremental(question, { timeBudgetMs = 1200, maxReturn
     final.push(r);
   }
 
-  const done = askScanState.nextPage > endPage;
+  const done = askScanState.nextPage > pageCount;
   return { hits: final, done };
 }
 
 async function handleAsk() {
-  const q = (askInput?.value || "").trim();
+  const q = (questionEl?.value || "").trim();
   if (!q) return;
 
   if (!pdfDoc) {
-    if (askOutput) askOutput.textContent = "Load a PDF first.";
+    if (answerEl) answerEl.textContent = "Load a PDF first.";
     return;
   }
 
-  if (askOutput) askOutput.innerHTML = `<div style="opacity:.85;">Searching your POH/AFM offline…</div>`;
+  if (answerEl) answerEl.innerHTML = `<div style="opacity:.85;">Searching your POH/AFM offline…</div>`;
+  renderBestPlaces([]); // clear old cards while scanning
 
   const { hits, done } = await runLocalAskIncremental(q, { timeBudgetMs: 1200, maxReturn: 7 });
 
   if (!hits.length) {
-    if (askOutput) {
-      askOutput.innerHTML =
+    if (answerEl) {
+      answerEl.innerHTML =
         `<div style="font-weight:700;">No strong matches found.</div>
          <div style="opacity:.8;margin-top:8px;">Try shorter keywords (e.g., “Vref”, “105”, “oil pressure”, “takeoff”).</div>
          <div style="opacity:.75;margin-top:10px;">Safety: Always verify in the official POH/AFM.</div>`;
@@ -1217,28 +818,25 @@ async function handleAsk() {
     return;
   }
 
-  // render small clickable cards in the right panel section
   renderBestPlaces(hits);
 
-  // Keep the answer area minimal (no big cards)
-if (askOutput) {
-  askOutput.innerHTML = `
-    <div class="sectionMeta">
-      I’ve highlighted the most relevant pages below.
-      Use <b>Jump</b> or <b>Read from here</b>.
-    </div>
-    ${
-      done
-        ? ""
-        : `<div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
-             <button id="askMoreBtn">Search more</button>
-             <span style="opacity:.75;font-size:12px;">Scanning… ${Math.min(askScanState?.scannedPages || 0, pdfDoc?.numPages || 0)}/${pdfDoc?.numPages || 0}</span>
-           </div>`
-    }
-  `;
-}
+  if (answerEl) {
+    answerEl.innerHTML = `
+      <div class="sectionMeta">
+        I’ve highlighted the most relevant pages below.
+        Use <b>Jump</b> or <b>Read from here</b>.
+      </div>
+      ${
+        done
+          ? ""
+          : `<div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+               <button id="askMoreBtn">Search more</button>
+               <span style="opacity:.75;font-size:12px;">Scanning…</span>
+             </div>`
+      }
+    `;
+  }
 
-  // optional "Search more" button
   const more = document.getElementById("askMoreBtn");
   if (more) {
     more.onclick = async () => {
@@ -1248,41 +846,270 @@ if (askOutput) {
 }
 
 // =====================================================
-// Library UI
+// TTS (chunked resume)
 // =====================================================
-async function refreshLibrarySelectUI() {
-  if (!librarySelect) return;
+function pickBestVoiceForLang(lang) {
+  const l = (lang || "en").toLowerCase();
+  const candidates = voices.filter(v => (v.lang || "").toLowerCase().startsWith(l));
+  const pool = candidates.length ? candidates : voices;
 
-  let items = [];
+  const prefer = (rx) => pool.find(v => rx.test((v.name || "").toLowerCase()));
+  return prefer(/siri/) || prefer(/enhanced|premium|neural|natural/) || pool[0] || null;
+}
+
+function getSelectedVoice() {
+  const name = voiceSelect?.value || "";
+  return voices.find((v) => v.name === name) || null;
+}
+
+function refreshVoices() {
+  voices = window.speechSynthesis?.getVoices?.() || [];
+  if (!voiceSelect) return;
+
+  voiceSelect.innerHTML = "";
+  for (const v of voices) {
+    const opt = document.createElement("option");
+    opt.value = v.name;
+    opt.textContent = `${v.name} (${v.lang})`;
+    voiceSelect.appendChild(opt);
+  }
+
+  const best = pickBestVoiceForLang("en");
+  if (best) voiceSelect.value = best.name;
+}
+
+function stopTts({ keepProgress = true } = {}) {
   try {
-    items = await idbGetAll(STORE_PDFS);
-  } catch (e) {
-    console.warn("Could not read library:", e);
+    ttsWasCancelled = true;
+    ttsKeepProgressOnCancel = keepProgress;
+    window.speechSynthesis.cancel();
+  } catch {}
+
+  ttsSpeaking = false;
+  if (!keepProgress) lastReadProgress = null;
+  refreshResumeBtn();
+}
+
+function makeTextKey(text) {
+  const s = String(text || "");
+  return `${s.length}:${s.slice(0, 40)}:${s.slice(-40)}`;
+}
+
+function chunkText(text, maxLen = 220) {
+  const s = String(text || "").trim();
+  if (!s) return [];
+
+  const chunks = [];
+  let i = 0;
+  while (i < s.length) {
+    let end = Math.min(i + maxLen, s.length);
+    if (end < s.length) {
+      const lastSpace = s.lastIndexOf(" ", end);
+      if (lastSpace > i + 80) end = lastSpace;
+    }
+    chunks.push(s.slice(i, end).trim());
+    i = end;
+  }
+  return chunks.filter(Boolean);
+}
+
+async function speakChunked(text, { page, label } = {}, { resume = false } = {}) {
+  const cleaned = String(text || "").trim();
+  if (!cleaned) return;
+
+  const key = makeTextKey(cleaned);
+
+  let offset = 0;
+  if (resume && lastReadProgress && lastReadProgress.page === page && lastReadProgress.key === key) {
+    offset = Math.max(0, lastReadProgress.offset || 0);
+  }
+
+  const remaining = cleaned.slice(offset);
+  const chunks = chunkText(remaining, 220);
+  if (!chunks.length) return;
+
+  ttsSpeaking = true;
+  lastReadProgress = { page, key, offset, label, started: false };
+  refreshResumeBtn();
+
+  const v = getSelectedVoice() || pickBestVoiceForLang("en");
+  const rate = Number(speedRange?.value || 1.0);
+
+  const speakNext = () => {
+    if (!chunks.length) {
+      ttsSpeaking = false;
+      refreshResumeBtn();
+      return;
+    }
+
+    const chunk = chunks.shift();
+    const u = new SpeechSynthesisUtterance(chunk);
+    if (v) u.voice = v;
+    u.rate = Number.isFinite(rate) ? rate : 1.0;
+
+    u.onstart = () => {
+      if (lastReadProgress) {
+        lastReadProgress.started = true;
+        if ((lastReadProgress.offset || 0) === 0) lastReadProgress.offset = 1;
+        refreshResumeBtn();
+      }
+    };
+
+    u.onend = () => {
+      if (ttsWasCancelled) {
+        ttsWasCancelled = false;
+        if (!ttsKeepProgressOnCancel) lastReadProgress = null;
+        refreshResumeBtn();
+        return;
+      }
+
+      if (lastReadProgress) lastReadProgress.offset += chunk.length;
+      refreshResumeBtn();
+      speakNext();
+    };
+
+    u.onerror = () => {
+      ttsSpeaking = false;
+      refreshResumeBtn();
+    };
+
+    if (lastReadProgress && (lastReadProgress.offset || 0) === 0) {
+      lastReadProgress.offset = 1;
+      refreshResumeBtn();
+    }
+
+    window.speechSynthesis.speak(u);
+  };
+
+  speakNext();
+}
+
+async function resumeTts() {
+  if (!pdfDoc || !lastReadProgress) return;
+
+  const p = lastReadProgress.page;
+  await goToPage(p);
+
+  const text = await getPageTextForTts(p);
+  const keyNow = makeTextKey(text);
+
+  const canResume =
+    lastReadProgress &&
+    lastReadProgress.page === p &&
+    lastReadProgress.key === keyNow &&
+    (lastReadProgress.offset || 0) > 0;
+
+  await speakChunked(
+    text || "No readable text found on this page.",
+    { page: p, label: lastReadProgress.label || "page" },
+    { resume: !!canResume }
+  );
+
+  if (!canResume && lastReadProgress) lastReadProgress.offset = 0;
+  refreshResumeBtn();
+}
+
+async function readCurrentPage() {
+  if (!pdfDoc) return;
+  const text = await getPageTextForTts(pageNum);
+
+  const canResume =
+    lastReadProgress &&
+    lastReadProgress.page === pageNum &&
+    lastReadProgress.key === makeTextKey(text) &&
+    (lastReadProgress.offset || 0) > 0;
+
+  await speakChunked(
+    text || "No readable text found on this page.",
+    { page: pageNum, label: "page" },
+    { resume: !!canResume }
+  );
+}
+
+async function readCurrentSection() {
+  if (!pdfDoc) return;
+
+  let idx = currentSectionIndex;
+  if (idx < 0 || !sectionRanges[idx]) {
+    await readCurrentPage();
     return;
   }
 
-  librarySelect.innerHTML = "";
+  const s = sectionRanges[idx];
+  const maxPages = 6;
+  const end = Math.min(s.end, s.start + maxPages - 1);
 
-  if (!items.length) {
-    const opt = document.createElement("option");
-    opt.value = "";
-    opt.textContent = "(No saved PDFs yet)";
-    librarySelect.appendChild(opt);
+  let combined = `Section: ${s.title}. Pages ${s.start} to ${end}. `;
+  for (let p = s.start; p <= end; p++) {
+    const t = await getPageTextForTts(p);
+    if (t) combined += " " + t;
+    await sleep(0);
+  }
+
+  await speakChunked(combined.trim(), { page: s.start, label: "section" }, { resume: false });
+}
+
+// =====================================================
+// Mic (Hold-to-talk)
+// =====================================================
+let recognition = null;
+let micReady = false;
+let isHolding = false;
+
+async function ensureMicPermission() {
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function setupSpeechRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    setMicStatus("Mic not supported in this browser.");
+    if (micBtn) micBtn.disabled = true;
     return;
   }
 
-  items.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+  recognition = new SR();
+  recognition.lang = "en-US";
+  recognition.interimResults = true;
+  recognition.continuous = false;
 
-  for (const it of items) {
-    const opt = document.createElement("option");
-    opt.value = it.id;
-    opt.textContent = it.name || it.id;
-    librarySelect.appendChild(opt);
-  }
+  recognition.onstart = () => setMicStatus("Listening…");
+  recognition.onend = () => setMicStatus("Mic ready. Hold to talk.");
+  recognition.onerror = (e) => setMicStatus(`Mic error: ${e?.error || "unknown"}`);
 
-  if (currentPdfId && items.some((x) => x.id === currentPdfId)) {
-    librarySelect.value = currentPdfId;
-  }
+  recognition.onresult = (event) => {
+    let transcript = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    transcript = transcript.trim();
+    if (!transcript) return;
+
+    const last = event.results[event.results.length - 1];
+    if (last.isFinal) {
+      if (questionEl) questionEl.value = transcript;
+      setMicStatus(`Heard: "${transcript}"`);
+    } else {
+      setMicStatus(`Listening… "${transcript}"`);
+    }
+  };
+
+  micReady = true;
+}
+
+function startListening() {
+  if (!recognition) return;
+  try { recognition.start(); } catch {}
+}
+
+function stopListening() {
+  if (!recognition) return;
+  try { recognition.stop(); } catch {}
 }
 
 // =====================================================
@@ -1298,29 +1125,24 @@ async function loadPdfFromBytes(bytes) {
 
   pdfDoc = await task.promise;
 
-  if (window.setEmptyStateVisible) window.setEmptyStateVisible(false);
-
   pageCount = pdfDoc.numPages;
   pageNum = 1;
 
   pageTextCache.clear();
   pageTtsCache.clear();
   clearSearchUI();
-
   askScanState = null;
   lastReadProgress = null;
 
   enablePdfDependentControls(true);
   setPageInfo();
   await renderPage(pageNum);
-
   await buildOutlineAndSections();
 
   setLibraryStatus("Loaded ✅");
 
-  if (askOutput) {
-    askOutput.textContent =
-      `Loaded ✅\n\n${currentPdfName || currentPdfId || ""}\n\nSafety: Always verify in the official POH/AFM.`;
+  if (answerEl) {
+    answerEl.textContent = `Loaded ✅\n\nSafety: Always verify in the official POH/AFM.`;
   }
 }
 
@@ -1363,7 +1185,7 @@ async function loadPdfFromFileAndSave(file) {
   currentPdfName = rec.name || currentPdfName;
 
   await openWithRetries(rec.buffer, { tries: 3, delayMs: 250 });
-  restoredOnStartuped = true;
+  restoredOnStartup = true;
 }
 
 async function restoreLastPdfOnStartup() {
@@ -1377,15 +1199,50 @@ async function restoreLastPdfOnStartup() {
     await refreshLibrarySelectUI();
     await openWithRetries(rec.buffer, { tries: 3, delayMs: 250 });
 
-    restoredOnStartuped = true;
+    restoredOnStartup = true;
 
-    if (askOutput) {
-      askOutput.textContent =
+    if (answerEl) {
+      answerEl.textContent =
         `Restored from Library ✅\n\n${rec.name}\n\nSafety: Always verify in the official POH/AFM.`;
     }
   } catch (err) {
     if (isRenderingCancelled(err)) return;
     console.error("restoreLastPdfOnStartup failed:", err);
+  }
+}
+
+async function refreshLibrarySelectUI() {
+  if (!librarySelect) return;
+
+  let items = [];
+  try {
+    items = await idbGetAll(STORE_PDFS);
+  } catch (e) {
+    console.warn("Could not read library:", e);
+    return;
+  }
+
+  librarySelect.innerHTML = "";
+
+  if (!items.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "(No saved PDFs yet)";
+    librarySelect.appendChild(opt);
+    return;
+  }
+
+  items.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+
+  for (const it of items) {
+    const opt = document.createElement("option");
+    opt.value = it.id;
+    opt.textContent = it.name || it.id;
+    librarySelect.appendChild(opt);
+  }
+
+  if (currentPdfId && items.some((x) => x.id === currentPdfId)) {
+    librarySelect.value = currentPdfId;
   }
 }
 
@@ -1416,8 +1273,8 @@ async function copyFeedbackFlow() {
 
   try {
     await navigator.clipboard.writeText(payload);
-    setFeedbackStatus("Copied ✅");
-    setTimeout(() => setFeedbackStatus(""), 2500);
+    setLibraryStatus("Feedback copied ✅");
+    setTimeout(() => setLibraryStatus(""), 2500);
   } catch (e) {
     console.warn("Clipboard failed:", e);
     alert("Could not copy to clipboard. (Browser blocked it)");
@@ -1427,6 +1284,10 @@ async function copyFeedbackFlow() {
 // =====================================================
 // Events
 // =====================================================
+function cancelSearch() {
+  searchCancelToken.cancel = true;
+}
+
 fileInput?.addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
   e.target.value = "";
@@ -1438,7 +1299,7 @@ fileInput?.addEventListener("change", async (e) => {
   }
 
   try {
-    enableCoreInputs();
+    cancelSearch();
     enablePdfDependentControls(false);
     setLibraryStatus("Saving + loading…");
     await loadPdfFromFileAndSave(file);
@@ -1450,9 +1311,10 @@ fileInput?.addEventListener("change", async (e) => {
   }
 });
 
-bottomUploadBtn?.addEventListener("click", () => {
-  fileInput?.click();
-});
+// optional upload button (if your top bar still has it)
+uploadBtn?.addEventListener("click", () => fileInput?.click());
+
+bottomUploadBtn?.addEventListener("click", () => fileInput?.click());
 
 bottomPrevBtn?.addEventListener("click", async () => {
   if (!pdfDoc || pageNum <= 1) return;
@@ -1465,7 +1327,7 @@ bottomNextBtn?.addEventListener("click", async () => {
 });
 
 bottomSearchBtn?.addEventListener("click", () => {
-  const q = document.getElementById("searchQuery");
+  const q = $("searchQuery") || searchInput;
   q?.scrollIntoView({ behavior: "smooth", block: "start" });
   setTimeout(() => q?.focus(), 250);
 });
@@ -1475,6 +1337,7 @@ openFromLibraryBtn?.addEventListener("click", async () => {
   if (!id) return;
 
   try {
+    cancelSearch();
     const rec = await loadPdfFromLibrary(id);
     if (!rec?.buffer) return;
 
@@ -1522,9 +1385,7 @@ clearLibraryBtn?.addEventListener("click", async () => {
 
 feedbackBtn?.addEventListener("click", copyFeedbackFlow);
 
-sectionFilter?.addEventListener("input", () => {
-  applySectionsFilter();
-});
+sectionFilter?.addEventListener("input", applySectionsFilter);
 
 searchBtn?.addEventListener("click", async () => {
   if (!pdfDoc) return;
@@ -1539,33 +1400,22 @@ searchInput?.addEventListener("keydown", async (e) => {
   }
 });
 
-readHitsBtn?.addEventListener("click", async () => {
-  await readSearchHits();
-});
-
 askBtn?.addEventListener("click", handleAsk);
 
-readPageBtn?.addEventListener("click", async () => {
-  await readCurrentPage();
-});
-
-readSectionBtn?.addEventListener("click", async () => {
-  await readCurrentSection();
-});
+readPageBtn?.addEventListener("click", readCurrentPage);
+readSectionBtn?.addEventListener("click", readCurrentSection);
 
 stopReadBtn?.addEventListener("click", () => {
   stopTts({ keepProgress: true });
-  document.body.classList.remove("tts-active"); // ✅ ADD THIS
   refreshResumeBtn();
 });
 
-resumeReadBtn?.addEventListener("click", async () => {
-  if (!pdfDoc || !lastReadProgress) return;
-  await resumeTts();
-});
+resumeReadBtn?.addEventListener("click", resumeTts);
 
+// Mic hold-to-talk
 if (micBtn) {
   micBtn.disabled = false;
+
   micBtn.addEventListener("pointerdown", async (e) => {
     e.preventDefault();
     if (isHolding) return;
@@ -1600,9 +1450,10 @@ if (micBtn) {
   micBtn.addEventListener("pointerleave", endHold);
 }
 
+// =====================================================
+// Startup
+// =====================================================
 window.addEventListener("DOMContentLoaded", async () => {
-  enableCoreInputs();
-
   enablePdfDependentControls(false);
   setPageInfo();
 
@@ -1614,24 +1465,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   await refreshLibrarySelectUI();
   await restoreLastPdfOnStartup();
 
-  if (window.setEmptyStateVisible) {
-    window.setEmptyStateVisible(!restoredOnStartuped);
-  }
-
   setMicStatus("Mic ready. Hold to talk.");
   refreshResumeBtn();
 });
 
-// Small safety: cancel search if user loads another PDF fast
-function cancelSearch() {
-  searchCancelToken.cancel = true;
-}
-
 // Debug helpers
 window.__POH = window.__POH || {};
 window.__POH.getPageTextForTts = getPageTextForTts;
-window.__POH.getProgress = () => ({ ...lastReadProgress });
 window.__POH.pageNum = () => pageNum;
+window.__POH.renderBestPlaces = renderBestPlaces;
 
 // Register Service Worker (GitHub Pages–safe)
 if ("serviceWorker" in navigator) {
