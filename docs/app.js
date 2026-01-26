@@ -189,6 +189,7 @@ let voices = [];
 let ttsSpeaking = false;
 let lastReadProgress = null; // { page, key, offset, label, started? }
 let ttsWasCancelled = false;
+let ttsUserStopped = false; // user pressed Stop (important for iOS recovery)
 let ttsKeepProgressOnCancel = false;
 
 if (resumeReadBtn) resumeReadBtn.disabled = true;
@@ -879,6 +880,9 @@ function refreshVoices() {
 }
 
 function stopTts({ keepProgress = true } = {}) {
+  ttsUserStopped = true;
+  setTimeout(() => (ttsUserStopped = false), 400);
+
   try {
     ttsWasCancelled = true;
     ttsKeepProgressOnCancel = keepProgress;
@@ -886,8 +890,9 @@ function stopTts({ keepProgress = true } = {}) {
   } catch {}
 
   ttsSpeaking = false;
+
   if (!keepProgress) lastReadProgress = null;
-  refreshResumeBtn();
+  updateResumeBtnState();
 }
 
 function makeTextKey(text) {
@@ -914,6 +919,8 @@ function chunkText(text, maxLen = 220) {
 }
 
 async function speakChunked(text, { page, label } = {}, { resume = false } = {}) {
+  ttsUserStopped = false;   // ✅ RESET USER-STOP FLAG (CRITICAL)
+
   const cleaned = String(text || "").trim();
   if (!cleaned) return;
 
@@ -968,10 +975,22 @@ async function speakChunked(text, { page, label } = {}, { resume = false } = {})
       speakNext();
     };
 
-    u.onerror = () => {
-      ttsSpeaking = false;
-      refreshResumeBtn();
-    };
+    u.onerror = (e) => {
+  const err = String(e?.error || "").toLowerCase();
+
+  // iOS Safari often fires "interrupted"/"canceled" mid-speech.
+  // Treat it like a normal end and continue.
+  if (!ttsUserStopped && (err === "interrupted" || err === "canceled" || err === "cancelled")) {
+    if (lastReadProgress) lastReadProgress.offset += chunk.length;
+    refreshResumeBtn();
+    setTimeout(speakNext, 80);
+    return;
+  }
+
+  // real error -> stop
+  ttsSpeaking = false;
+  refreshResumeBtn();
+};
 
     if (lastReadProgress && (lastReadProgress.offset || 0) === 0) {
       lastReadProgress.offset = 1;
