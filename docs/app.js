@@ -1327,9 +1327,19 @@ bottomNextBtn?.addEventListener("click", async () => {
 });
 
 bottomSearchBtn?.addEventListener("click", () => {
-  const q = $("searchQuery") || searchInput;
-  q?.scrollIntoView({ behavior: "smooth", block: "start" });
-  setTimeout(() => q?.focus(), 250);
+  const section =
+    document.getElementById("searchSection") ||
+    document.querySelector(".searchCard") ||
+    document.getElementById("searchResults") ||
+    searchInput;
+
+  section?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  setTimeout(() => {
+    (searchInput ||
+      document.getElementById("searchInput") ||
+      document.getElementById("searchQuery"))?.focus?.();
+  }, 250);
 });
 
 openFromLibraryBtn?.addEventListener("click", async () => {
