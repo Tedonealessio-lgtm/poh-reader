@@ -193,13 +193,6 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   backdrop-filter:blur(10px);
 }
 
-.bestPlacesWrap{
-  margin-top:10px;
-  padding:0;
-  border:none;
-  background:transparent;
-}
-
 /* These are the GOOD “jump cards” (keep them) */
 .hitCard{
   border:1px solid rgba(255,255,255,0.10);
@@ -284,4 +277,36 @@ body.tts-active .bottomBar{ display:none !important; }
 
 @media (prefers-reduced-motion: reduce){
   *{ scroll-behavior:auto; }
+}
+
+/* --- Best Places spacing + nicer tap targets --- */
+#bestPlacesWrap {
+  margin-top: 12px;
+}
+
+#bestPlaces {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;            /* space between cards */
+}
+
+.bestPlaceCard {
+  padding: 14px 14px;
+  border-radius: 14px;
+}
+
+.bestPlaceTitle {
+  margin-bottom: 8px;
+}
+
+.bestPlaceActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.bestPlaceBtn {
+  padding: 10px 12px;
+  border-radius: 12px;
+  min-height: 40px;     /* bigger tap area */
 }
