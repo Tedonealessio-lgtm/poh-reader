@@ -136,11 +136,11 @@ const bottomSearchBtn = $("bottomSearch");
 const canvas = $("canvas");
 const ctx = canvas?.getContext("2d");
 
-// No top bar controls anymore
-const uploadBtn = null;
-const prevBtn = null;
-const nextBtn = null;
-const pageInfo = null;
+// Top-bar controls STILL EXIST for logic (even if hidden in UI)
+const uploadBtn = $("uploadBtn");
+const prevBtn   = $("prev");
+const nextBtn   = $("next");
+const pageInfo  = $("pageInfo");
 
 // Keep Resume as-is (it still exists in the right panel)
 const resumeReadBtn = $("resumeReadBtn");
