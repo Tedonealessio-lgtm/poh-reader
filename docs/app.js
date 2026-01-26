@@ -123,61 +123,70 @@ async function getLastPdfFromLibrary() {
 
 // =====================================================
 // UI refs (MATCH YOUR index.html IDs)
-// =====================================================
+
 const fileInput = $("file");
-
-// Bottom bar buttons (only controls now)
-const bottomPrevBtn = $("bottomPrev");
-const bottomNextBtn = $("bottomNext");
-const bottomUploadBtn = $("bottomUpload");
-const bottomSearchBtn = $("bottomSearch");
-
-// Keep canvas exactly as-is
+const uploadBtn = $("uploadBtn");
 const canvas = $("canvas");
 const ctx = canvas?.getContext("2d");
 
-// Top-bar controls STILL EXIST for logic (even if hidden in UI)
-const uploadBtn = $("uploadBtn");
-const prevBtn   = $("prev");
-const nextBtn   = $("next");
-const pageInfo  = $("pageInfo");
+const pageInfo = $("pageInfo");
 
-// Keep Resume as-is (it still exists in the right panel)
-const resumeReadBtn = $("resumeReadBtn");
+// Bottom dock buttons
+const bottomPrevBtn   = $("bottomPrev");
+const bottomNextBtn   = $("bottomNext");
+const bottomUploadBtn = $("bottomUpload");
+const bottomSearchBtn = $("bottomSearch");
 
+// Library
 const librarySelect = $("librarySelect");
 const openFromLibraryBtn = $("openFromLibraryBtn");
 const deleteFromLibraryBtn = $("deleteFromLibraryBtn");
 const clearLibraryBtn = $("clearLibraryBtn");
 const libraryStatus = $("libraryStatus");
-
 const feedbackBtn = $("feedbackBtn");
-const feedbackStatus = $("feedbackStatus");
 
-const sectionsBox = $("sections");
+// Sections + Search
 const sectionFilter = $("sectionFilter");
-
-const searchInput = $("searchQuery");
+const sectionsList = $("sectionsList");
+const searchInput = $("searchInput");
 const searchBtn = $("searchBtn");
-const readHitsBtn = $("readHitsBtn");
 const searchResults = $("searchResults");
 
-const askInput = $("question");
+// Ask & Listen
+const questionEl = $("question");
 const askBtn = $("askBtn");
-const askOutput = $("answer");
+const bestPlacesWrap = $("bestPlacesWrap");
+const bestPlacesBox = $("bestPlaces");
+const answerEl = $("answer");
 
+// Mic
 const micBtn = $("micBtn");
 const micStatus = $("micStatus");
 
+// TTS
 const readPageBtn = $("readPageBtn");
 const readSectionBtn = $("readSectionBtn");
 const stopReadBtn = $("stopReadBtn");
-const ttsRate = $("ttsRate");
+const resumeReadBtn = $("resumeReadBtn");
 const voiceSelect = $("voiceSelect");
+const speedRange = $("speedRange");
+// -----------------------------------------------------
+// Aliases (so older code doesn't crash)
+// -----------------------------------------------------
+const askInput  = questionEl;   // Ask textbox
+const askOutput = answerEl;     // Ask output area
 
-// Best Places UI (must exist in index.html)
-const bestPlacesWrap = document.getElementById("bestPlacesWrap");
-const bestPlacesBox = document.getElementById("bestPlaces");
+const sectionsBox = sectionsList; // sections container
+
+const ttsRate = speedRange;     // speed slider
+
+// Optional elements (only if they exist in HTML)
+const prevBtn = $("prev");      // top-bar prev (if present)
+const nextBtn = $("next");      // top-bar next (if present)
+
+const readHitsBtn = $("readHitsBtn");     // if you have it in HTML
+const searchStatus = $("searchStatus");   // if you have it in HTML
+const feedbackStatus = $("feedbackStatus"); // if you have it in HTML
 
 // =====================================================
 // State
@@ -288,6 +297,38 @@ let bestPlacesHandlersAttached = false;
 function attachBestPlacesHandlersOnce() {
   if (bestPlacesHandlersAttached) return;
   if (!bestPlacesBox) return;
+
+  function renderBestPlaces(hits) {
+  if (!bestPlacesWrap || !bestPlacesBox) return;
+
+  attachBestPlacesHandlersOnce();
+
+  const list = Array.isArray(hits) ? hits : [];
+  if (!list.length) {
+    bestPlacesWrap.style.display = "none";
+    bestPlacesBox.innerHTML = "";
+    return;
+  }
+
+  bestPlacesWrap.style.display = "block";
+
+  bestPlacesBox.innerHTML = list.slice(0, 7).map((h, idx) => {
+    const title = escapeHtml(h.sectionTitle || "Relevant page");
+    const excerpt = escapeHtml(h.excerpt || "");
+    const page = Number(h.page || 1);
+
+    return `
+      <div class="hitCard" style="margin-top:12px;padding:10px;border-radius:12px;">
+        <div style="font-weight:700;">${idx + 1}. ${title}</div>
+        ${excerpt ? `<div style="opacity:.85;font-size:12px;margin-top:6px;">${excerpt}</div>` : ""}
+        <div style="display:flex;gap:10px;margin-top:10px;">
+          <button class="bestPlaceBtn" data-page="${page}">Jump</button>
+          <button class="bestPlaceBtn" data-page="${page}" data-read="1">Read from here</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
 
   const onTap = async (e) => {
     const btn = e.target?.closest?.(".bestPlaceBtn[data-page]");
@@ -1107,6 +1148,7 @@ async function runLocalAskIncremental(question, { timeBudgetMs = 1200, maxReturn
 
   while (askScanState.nextPage <= endPage) {
     const p = askScanState.nextPage++;
+    askScanState.scannedPages = p;
 
     const text = await getPageText(p);
     if (text) {

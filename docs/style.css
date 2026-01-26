@@ -1,28 +1,23 @@
 :root{
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-
-  --bg: #0e1622;
-  --panel: #141f2d;
-  --panel2: rgba(255,255,255,0.04);
-  --border: rgba(255,255,255,0.10);
-  --border2: rgba(255,255,255,0.08);
-  --text: #e8eef7;
-
-  --bottomDockH: 96px;
+  --dockH: 96px;
 }
-
-*{ box-sizing: border-box; }
 
 body{
   margin:0;
-  background:var(--bg);
-  color:var(--text);
+  background:#0e1622;
+  color:#e8eef7;
+  padding-bottom: calc(var(--dockH) + env(safe-area-inset-bottom));
+}
+
+.hiddenFile{
+  position:absolute; left:-9999px; width:1px; height:1px; opacity:0;
 }
 
 /* ===== TOP BAR ===== */
 .topbar{
   padding:12px 16px;
-  border-bottom:1px solid rgba(255,255,255,0.08);
+  border-bottom:1px solid #1d2a3a;
   display:flex;
   justify-content:space-between;
   align-items:center;
@@ -33,62 +28,52 @@ body{
   display:flex;
   align-items:center;
   gap:12px;
+  min-width: 220px;
 }
 
 .brand img{
-  height:56px; /* bigger logo */
+  height:56px;
   width:auto;
   display:block;
-  border-radius:12px;
 }
 
-.brandText{ display:flex; flex-direction:column; gap:2px; }
-.brandTitle{
-  font-weight:700;
-  letter-spacing:.8px;
-  font-size:16px;
-}
-.brandTag{
-  font-size:12px;
-  opacity:.75;
-}
+.brandTitle{ font-weight:800; letter-spacing:.5px; }
+.brandSub{ opacity:.75; font-size:12px; margin-top:2px; }
 
 .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.spacer{ flex:1; }
-
-.hiddenFile{
-  position:absolute; left:-9999px; width:1px; height:1px; opacity:0;
-}
 
 .uploadBtn{
   font-weight:700;
-  border-radius:14px;
+  border-radius:12px;
   padding:10px 12px;
+}
+
+.pageInfo{
+  opacity:.85;
+  font-weight:600;
 }
 
 /* ===== LAYOUT ===== */
 main{
   display:grid;
-  grid-template-columns:320px 1fr 340px;
+  grid-template-columns:320px 1fr 320px;
   gap:12px;
   padding:12px;
 }
 
+@media (max-width: 900px){
+  main{ grid-template-columns:1fr; }
+}
+
 /* ===== PANELS ===== */
 .panel{
-  background:var(--panel);
-  border:1px solid rgba(255,255,255,0.08);
-  border-radius:14px;
+  background:#141f2d;
+  border:1px solid #22344a;
+  border-radius:12px;
   padding:14px;
   min-height:0;
 }
 
-.emptyState .fineprint{
-  opacity:.75;
-  font-size:13px;
-}
-
-/* helper text */
 .sectionHint{
   font-size:12px;
   opacity:.72;
@@ -96,13 +81,14 @@ main{
   line-height:1.35;
 }
 .sectionMeta{ font-size:12px; opacity:.75; line-height:1.35; }
-.muted{ opacity:.75; font-size:12px; }
+
+hr{ border:none; border-top:1px solid rgba(255,255,255,.08); margin:14px 0; }
 
 /* ===== VIEWER ===== */
 .viewer{
   background:#0c1420;
-  border:1px solid rgba(255,255,255,0.08);
-  border-radius:14px;
+  border:1px solid #22344a;
+  border-radius:12px;
   padding:12px;
   overflow:auto;
 }
@@ -110,57 +96,52 @@ canvas{
   width:100%;
   height:auto;
   background:#fff;
-  border-radius:8px;
+  border-radius:6px;
 }
 
 /* ===== INPUTS ===== */
 input[type="text"], textarea, select{
   width:100%;
   padding:10px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,0.10);
+  border-radius:10px;
+  border:1px solid #243348;
   background:#0b0f14;
-  color:var(--text);
+  color:#e8eef7;
 }
 textarea{ resize:vertical; }
-
-/* Make <select> readable on iOS */
-select{
-  -webkit-appearance: none;
-  appearance: none;
-}
+select{ -webkit-appearance:none; appearance:none; }
 
 /* ===== BUTTONS ===== */
 button{
   padding:8px 10px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.06);
-  color:var(--text);
+  border-radius:10px;
+  border:1px solid #2a3d57;
+  background:#162235;
+  color:#e8eef7;
   cursor:pointer;
 }
-button:hover:not(:disabled){ background: rgba(255,255,255,0.10); }
+button:hover:not(:disabled){ background:#1d2f47; }
 button:disabled{ opacity:.45; cursor:not-allowed; }
 
 /* ===== RESULTS / ANSWER ===== */
 .results{
   margin-top:10px;
   padding:8px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,0.10);
+  border-radius:10px;
+  border:1px solid #243348;
   background:#0b0f14;
   max-height:40vh;
   overflow:auto;
 }
 
 .answer{
-  margin-top:10px;
+  margin-top:12px;
   white-space:pre-wrap;
   background:#0b0f14;
-  border:1px solid rgba(255,255,255,0.10);
-  border-radius:14px;
+  border:1px solid #243348;
+  border-radius:12px;
   padding:12px;
-  min-height:120px;
+  min-height:80px;
   line-height:1.35;
 }
 
@@ -170,9 +151,7 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   opacity:.75;
 }
 
-/* =========================
-   LEFT PANEL
-   ========================= */
+/* ===== LEFT PANEL: bounded lists ===== */
 .panelLeft{
   display:flex;
   flex-direction:column;
@@ -190,16 +169,13 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   margin-bottom:10px;
 }
 
-/* Search results bounded */
 #searchResults{
   max-height:32vh;
   overflow:auto;
   -webkit-overflow-scrolling:touch;
 }
 
-/* =========================
-   RIGHT PANEL (desktop)
-   ========================= */
+/* ===== RIGHT PANEL ===== */
 .panelRight{
   display:flex;
   flex-direction:column;
@@ -208,120 +184,78 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   overflow:hidden;
 }
 
-.panelRight #answer{
-  flex:1 1 auto;
-  min-height:0;
-  overflow-y:auto;
-  -webkit-overflow-scrolling:touch;
-  padding-bottom:12px;
-}
-
-/* TTS bar inside right panel */
-.panelRight #ttsControls{
-  flex:0 0 auto;
-  position:sticky;
-  bottom:0;
-  z-index:50;
-  background:rgba(14, 18, 26, .92);
-  backdrop-filter:blur(10px);
-  border-top:1px solid rgba(255,255,255,.08);
-  padding:10px;
-  padding-bottom:env(safe-area-inset-bottom);
-  border-radius:14px;
+.ttsControls{
   margin-top:10px;
+  background:rgba(16,18,22,.92);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
+  padding:10px;
+  backdrop-filter:blur(10px);
 }
 
-/* ===== Jump cards (no giant black container) ===== */
 .bestPlacesWrap{
-  margin-top: 10px;
-  padding: 0;
-  background: transparent;
-  border: 0;
+  margin-top:10px;
+  padding:0;
+  border:none;
+  background:transparent;
 }
 
-/* your app.js creates .hitCard — we style it nicely */
-#bestPlaces .hitCard{
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.10);
+/* These are the GOOD “jump cards” (keep them) */
+.hitCard{
+  border:1px solid rgba(255,255,255,0.10);
   background: rgba(255,255,255,0.04);
+  border-radius:14px;
+  padding:14px;
+  margin-top:12px;
 }
+.hitTitle{ font-weight:800; }
+.hitExcerpt{ opacity:.78; font-size:12px; margin-top:8px; line-height:1.35; }
+.hitActions{ display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
 
-/* Buttons inside hit cards */
-#bestPlaces .hitCard button{
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 12px;
-}
-
-/* ===== Pilot Access block polish (optional but nicer) ===== */
-.pilot-access{
-  margin-top: 10px;
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.08);
+.subBox{
+  margin-top:12px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
   background: rgba(255,255,255,0.03);
+  overflow:hidden;
 }
-
-.pilot-access-title{ font-weight:800; margin-top:10px; }
-.pilot-access-subtitle{ opacity:.85; margin-top:6px; }
-.pilot-access-bullets{ margin:10px 0 0 18px; opacity:.9; }
-.pilot-access-fineprint{ opacity:.75; font-size:12px; margin-top:10px; }
-.pilot-access-note{
-  margin-top: 12px;
-  opacity: .85;
-  font-size: 13px;
-  line-height: 1.35;
+.subBox summary{
+  padding:10px 12px;
+  cursor:pointer;
+  font-weight:700;
+  opacity:.95;
 }
+.subInner{ padding:12px; }
+.subscribeBtn{
+  width:100%;
+  padding:14px;
+  border-radius:14px;
+  font-weight:800;
+  background:#0a74d9;
+  border:1px solid rgba(255,255,255,.15);
+}
+.subText{ margin-top:10px; opacity:.85; }
 
-/* ===== MOBILE BOTTOM DOCK ===== */
+/* ===== MOBILE DOCK ===== */
 .bottomBar{ display:none; }
 
-@media (max-width: 900px){
-  main{ grid-template-columns:1fr; }
-}
-
 @media (max-width: 768px){
-  /* Space for dock */
-  body{
-    padding-bottom: calc(var(--bottomDockH) + env(safe-area-inset-bottom));
-  }
+  /* bigger logo on mobile */
+  .brand img{ height:64px; }
 
-  .panel{ padding:12px; }
+  /* allow normal scrolling on mobile */
+  .panelRight{ max-height:none; overflow:visible; }
+  .panelLeft{ max-height:none; overflow:visible; }
 
-  /* Mobile: don’t trap scroll in right panel */
-  .panelRight{
-    max-height:none;
-    overflow:visible;
-  }
-  .panelRight #answer{
-    overflow:visible;
-    padding-bottom:12px;
-  }
-  .panelRight #ttsControls{
-    position:static;
-    z-index:auto;
-    margin-top:10px;
-  }
-
-  /* Left panel */
-  .panelLeft{
-    max-height:none;
-    overflow:visible;
-  }
-  .sectionsList{ max-height:34vh; }
-  #searchResults{ max-height:28vh; }
-
-  /* Dock */
   .bottomBar{
     display:flex;
     position:fixed;
     left:12px;
     right:12px;
-    bottom: calc(12px + env(safe-area-inset-bottom));
-    gap:10px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
     z-index:9999;
+    gap:10px;
+
     padding:12px;
     border-radius:22px;
     border:1px solid rgba(255,255,255,0.10);
@@ -329,29 +263,25 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     box-shadow: 0 14px 40px rgba(0,0,0,0.45);
-    height: var(--bottomDockH);
+    height: var(--dockH);
     align-items:center;
   }
 
   .bottomBtn{
     flex:1;
     height:56px;
-    border-radius:18px;
-    font-weight:700;
+    border-radius:16px;
+    font-weight:800;
     font-size:15px;
     background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.10);
+    border:1px solid rgba(255,255,255,0.10);
   }
-  .bottomBtn.primary{ flex:1.2; }
+  .bottomBtn.primary{ flex:1.25; }
 }
+
+/* Hide dock while TTS “block” is focused/active (optional) */
+body.tts-active .bottomBar{ display:none !important; }
 
 @media (prefers-reduced-motion: reduce){
   *{ scroll-behavior:auto; }
-}
-
-/* Hide bottom dock when you set body.tts-active (your app can toggle this) */
-@media (max-width: 768px){
-  body.tts-active .bottomBar{
-    display: none !important;
-  }
 }
