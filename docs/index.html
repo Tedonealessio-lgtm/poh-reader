@@ -10,42 +10,27 @@
 
   <link rel="apple-touch-icon" href="./apple-touch-icon-v2.png" />
   <link rel="icon" href="./logo.png" />
-  <link rel="stylesheet" href="style.css?v=20260124a">
+  <link rel="stylesheet" href="style.css?v=20260124b">
 </head>
 
 <body>
-  <!-- ================= TOP BAR (DESKTOP / TABLET) ================= -->
+  <!-- ================= TOP BAR (BRAND ONLY) ================= -->
   <div class="topbar">
     <div class="brand">
       <img src="./logo.png" alt="POH Reader" />
       <span>POH Reader</span>
     </div>
-
-    <div class="row navControls">
-      <input id="file" type="file" accept="application/pdf" class="hiddenFile" />
-      <button id="uploadBtn" class="uploadBtn">+ Upload POH / OM</button>
-
-      <!-- Desktop nav controls (needed for bottom bar wiring too) -->
-      <button id="prev" type="button">◀ Prev</button>
-      <button id="next" type="button">Next ▶</button>
-      <span id="pageInfo">Page: — / —</span>
-    </div>
-
     <div class="spacer"></div>
+
+    <!-- Keep file input available (hidden). Upload is bottom-bar only -->
+    <input id="file" type="file" accept="application/pdf" class="hiddenFile" />
   </div>
 
   <!-- ================= WELCOME / EMPTY STATE ================= -->
-  <div id="emptyState" class="panel" style="margin:12px;">
+  <div id="emptyState" class="panel emptyState">
     <h2>POH Reader</h2>
-    <p>Upload your POH / OM once, then quickly search and listen.</p>
-    <ul>
-      <li><b>Search</b> = exact text search (fast + precise)</li>
-      <li><b>Ask & Listen</b> = suggests the best pages/sections to check</li>
-      <li><b>Listen</b> = read pages or sections out loud</li>
-    </ul>
-    <p style="opacity:.8;font-size:13px;">
-      Reference tool only — always verify in the official POH / AFM.
-    </p>
+    <p>Upload your POH/OM once, then quickly search and listen.</p>
+    <p class="muted">Decision-support only — always verify in the official POH/AFM.</p>
     <button id="emptyGotIt">Got it</button>
   </div>
 
@@ -68,14 +53,14 @@
       <hr />
 
       <h3>Sections</h3>
-      <div class="sectionHint">Jump to a section instantly.</div>
+      <div class="sectionHint">Jump instantly.</div>
       <input id="sectionFilter" type="text" placeholder="Filter sections…" />
       <div id="sections" class="sectionsList"></div>
 
       <hr />
 
-      <h3>Search within POH</h3>
-      <div class="sectionHint">Exact text search (best for numbers, limits, and specific terms).</div>
+      <h3>Search</h3>
+      <div class="sectionHint">Exact text search (best for numbers/limits).</div>
       <input id="searchQuery" type="text" placeholder="Search text..." />
       <button id="searchBtn">Search POH (exact)</button>
       <button id="readHitsBtn" disabled>Read hits</button>
@@ -91,86 +76,54 @@
     <!-- RIGHT PANEL -->
     <div class="panel panelRight">
       <h3>Ask & Listen</h3>
-<div class="sectionHint">
-  Offline POH reader with audio and contextual guidance.<br>
-  Contextual help — I’ll point you to the best pages/sections to check.<br>
-  <span style="opacity:0.8">Decision-support only.</span>
-</div>
+      <div class="sectionHint">
+        Offline guidance: I’ll point you to relevant pages.
+      </div>
 
-      <textarea
-        id="question"
-        placeholder="Ask a question (local mode)…"
-      ></textarea>
+      <textarea id="question" placeholder="Ask a question (local mode)…"></textarea>
       <button id="askBtn">Ask</button>
 
-      <!-- Pilot Access -->
-<div class="pilot-access">
-  <script async
-  src="https://js.stripe.com/v3/buy-button.js">
-</script>
-
-<stripe-buy-button
-  buy-button-id="buy_btn_1StCz0FxeWDYlHcnStVuEg5w"
-  publishable-key="pk_live_51St9L8FxeWDYlHcn8sBDfnXzozoEGIu5JTYvXXnGYX7pmgwcdNisK4kn2WjJWBiTBb8UoTbWQQiKkkrDQxofHtF000fCwYa4lX"
->
-</stripe-buy-button>
-<div class="pilot-access-support">
-  <div class="pilot-access-title">Pilot Subscription</div>
-
-  <div class="pilot-access-subtitle">
-    Keep using POH Reader freely — subscribing helps fund development and future features.
-  </div>
-
-  <ul class="pilot-access-bullets">
-    <li>Early access to improvements & new features</li>
-    <li>Priority feedback channel</li>
-    <li>Cancel anytime in Stripe</li>
-  </ul>
-
-  <div class="pilot-access-fineprint">
-    Decision-support only. Always verify in the official POH/AFM.
-  </div>
-</div>
-
-  <div class="pilot-access-note">
-    <strong>Important notice</strong><br />
-    POH Reader is a decision-support and study tool only.<br />
-    It does not replace the official POH/AFM or approved flight documentation.<br />
-    The pilot in command remains solely responsible for aircraft operation and compliance.
-  </div>
-</div>
-
-      <div id="bestPlacesWrap" class="card" style="margin-top:12px;">
-        <div class="sectionTitle">
-          Best places to look
-          <span id="buildStamp" style="opacity:.5;font-size:12px;margin-left:8px;"></span>
-        </div>
-        <div class="sectionMeta">
-          Offline mode: I’m pointing you to the most relevant pages.
-        </div>
+      <!-- Jump cards only (no “Best places…” header, no extra text) -->
+      <div id="bestPlacesWrap" class="card" style="display:none;">
         <div id="bestPlaces"></div>
       </div>
 
-      <div class="row" style="margin-top:8px;">
+      <div class="row" style="margin-top:10px;">
         <button id="micBtn">🎤 Hold to talk</button>
       </div>
       <div id="micStatus" class="sectionMeta"></div>
 
       <hr />
 
-      <!-- IMPORTANT: only ONE #answer in the DOM -->
+      <!-- Answer/notes area (kept, but you can keep it empty in local mode) -->
       <div id="answer" class="answer"></div>
+      <div class="safetyLine">Always verify in the official POH/AFM.</div>
 
-      <div class="safetyLine">
-        Safety: Always verify in the official POH/AFM.
-      </div>
+      <!-- Subscription moved DOWN + collapsed (no confusion, no wall of text) -->
+      <details class="pilot-access">
+        <summary>Pilot Subscription</summary>
+
+        <div class="pilot-access-inner">
+          <div class="muted" style="margin:6px 0 10px 0;">
+            Optional. Helps fund development.
+          </div>
+
+          <script async src="https://js.stripe.com/v3/buy-button.js"></script>
+          <stripe-buy-button
+            buy-button-id="buy_btn_1StCz0FxeWDYlHcnStVuEg5w"
+            publishable-key="pk_live_51St9L8FxeWDYlHcn8sBDfnXzozoEGIu5JTYvXXnGYX7pmgwcdNisK4kn2WjJWBiTBb8UoTbWQQiKkkrDQxofHtF000fCwYa4lX"
+          ></stripe-buy-button>
+
+          <div class="muted" style="margin-top:10px;">
+            Decision-support only. Cancel anytime in Stripe.
+          </div>
+        </div>
+      </details>
 
       <div id="ttsControls" class="ttsControls">
         <button id="readPageBtn">Read page</button>
         <button id="readSectionBtn">Read section</button>
         <button id="stopReadBtn">Stop</button>
-
-        <!-- IMPORTANT: only ONE Resume button in the whole DOM -->
         <button id="resumeReadBtn">Resume</button>
 
         <label>Speed</label>
@@ -180,19 +133,18 @@
     </div>
   </main>
 
-  <!-- ================= MOBILE BOTTOM BAR ================= -->
+  <!-- ================= MOBILE BOTTOM BAR (ONLY CONTROLS) ================= -->
   <div class="bottomBar">
     <button id="bottomPrev" class="bottomBtn">◀</button>
-    <button id="bottomUpload" class="bottomBtn primary">Upload</button>
+    <button id="bottomUpload" class="bottomBtn primary">Upload POH here</button>
     <button id="bottomSearch" class="bottomBtn">Search</button>
     <button id="bottomNext" class="bottomBtn">▶</button>
   </div>
 
   <!-- ================= SCRIPTS ================= -->
-  <script type="module" src="./app.js?v=20260124a"></script>
+  <script type="module" src="./app.js?v=20260124b"></script>
 
   <script>
-    // Empty state helper
     window.setEmptyStateVisible = function (visible) {
       const el = document.getElementById("emptyState");
       if (!el) return;
@@ -202,21 +154,6 @@
     document.getElementById("emptyGotIt")?.addEventListener("click", () => {
       window.setEmptyStateVisible(false);
     });
-
-    // Wire bottom bar to top controls
-    (function () {
-      const byId = (id) => document.getElementById(id);
-
-      const topUpload = byId("uploadBtn");
-      const topPrev = byId("prev");
-      const topNext = byId("next");
-      const topSearch = byId("searchBtn");
-
-      byId("bottomUpload")?.addEventListener("click", () => topUpload?.click());
-      byId("bottomPrev")?.addEventListener("click", () => topPrev?.click());
-      byId("bottomNext")?.addEventListener("click", () => topNext?.click());
-      byId("bottomSearch")?.addEventListener("click", () => topSearch?.click());
-    })();
   </script>
 </body>
 </html>

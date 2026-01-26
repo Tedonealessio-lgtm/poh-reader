@@ -125,14 +125,25 @@ async function getLastPdfFromLibrary() {
 // UI refs (MATCH YOUR index.html IDs)
 // =====================================================
 const fileInput = $("file");
-const uploadBtn = $("uploadBtn");
+
+// Bottom bar buttons (only controls now)
+const bottomPrevBtn = $("bottomPrev");
+const bottomNextBtn = $("bottomNext");
+const bottomUploadBtn = $("bottomUpload");
+const bottomSearchBtn = $("bottomSearch");
+
+// Keep canvas exactly as-is
 const canvas = $("canvas");
 const ctx = canvas?.getContext("2d");
 
-const prevBtn = $("prev");
-const nextBtn = $("next");
+// No top bar controls anymore
+const uploadBtn = null;
+const prevBtn = null;
+const nextBtn = null;
+const pageInfo = null;
+
+// Keep Resume as-is (it still exists in the right panel)
 const resumeReadBtn = $("resumeReadBtn");
-const pageInfo = $("pageInfo");
 
 const librarySelect = $("librarySelect");
 const openFromLibraryBtn = $("openFromLibraryBtn");
@@ -1461,18 +1472,24 @@ fileInput?.addEventListener("change", async (e) => {
   }
 });
 
-prevBtn?.addEventListener("click", async () => {
+bottomUploadBtn?.addEventListener("click", () => {
+  fileInput?.click();
+});
+
+bottomPrevBtn?.addEventListener("click", async () => {
   if (!pdfDoc || pageNum <= 1) return;
   await goToPage(pageNum - 1);
 });
 
-nextBtn?.addEventListener("click", async () => {
+bottomNextBtn?.addEventListener("click", async () => {
   if (!pdfDoc || pageNum >= pageCount) return;
   await goToPage(pageNum + 1);
 });
 
-uploadBtn?.addEventListener("click", () => {
-  fileInput?.click();
+bottomSearchBtn?.addEventListener("click", () => {
+  const q = document.getElementById("searchQuery");
+  q?.scrollIntoView({ behavior: "smooth", block: "start" });
+  setTimeout(() => q?.focus(), 250);
 });
 
 openFromLibraryBtn?.addEventListener("click", async () => {
