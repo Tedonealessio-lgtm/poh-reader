@@ -321,59 +321,6 @@ function attachBestPlacesHandlersOnce() {
   bestPlacesHandlersAttached = true;
 }
 
-function renderBestPlaces(places) {
-  const wrap = bestPlacesWrap;
-  const box = bestPlacesBox;
-  if (!wrap || !box) return;
-
-  attachBestPlacesHandlersOnce();
-
-  const norm = (places || [])
-    .map((p) => {
-      if (typeof p === "number") return { page: p };
-      if (typeof p === "string") return { page: parseInt(p, 10) };
-      return { ...p, page: parseInt(p.page, 10) };
-    })
-    .filter((p) => Number.isFinite(p.page));
-
-  norm.sort((a, b) => {
-    const as = Number.isFinite(a.score) ? a.score : 0;
-    const bs = Number.isFinite(b.score) ? b.score : 0;
-    if (bs !== as) return bs - as;
-    return a.page - b.page;
-  });
-
-  const seen = new Set();
-  const finalList = [];
-  for (const p of norm) {
-    if (seen.has(p.page)) continue;
-    seen.add(p.page);
-    finalList.push(p);
-  }
-
-  wrap.style.display = finalList.length ? "block" : "none";
-
-  if (!finalList.length) {
-    box.innerHTML = `<div class="sectionMeta">No strong matches found.</div>`;
-    return;
-  }
-
-  box.innerHTML = finalList.slice(0, 8).map((h, idx) => {
-    const title = h.sectionTitle ? escapeHtml(h.sectionTitle) : "Relevant page";
-    const excerpt = h.excerpt ? escapeHtml(h.excerpt) : "";
-    return `
-      <div class="hitCard" style="margin-top:12px;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.10);">
-        <div style="font-weight:700;">${idx + 1}. ${title} <span style="opacity:.75;">(p.${h.page})</span></div>
-        ${excerpt ? `<div style="opacity:.85;font-size:12px;margin-top:8px;white-space:pre-wrap;">"${excerpt}"</div>` : ``}
-        <div style="display:flex;gap:10px;margin-top:10px;">
-          <button class="bestPlaceBtn" data-page="${h.page}">Jump</button>
-          <button class="bestPlaceBtn" data-page="${h.page}" data-read="1">Read from here</button>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
 // =====================================================
 // Rendering helpers
 // =====================================================
@@ -1228,37 +1175,26 @@ async function handleAsk() {
     return;
   }
 
-  const header =
-    `<div style="font-weight:800;">Best places to look</div>
-     <div style="opacity:.8;margin-top:6px;">Offline mode: I’m pointing you to the most relevant pages.</div>
-     <div style="opacity:.75;margin-top:6px;">Question: ${escapeHtml(q)}</div>`;
-
-  const cards = hits
-    .map((h, idx) => {
-      if (!h || !Number.isFinite(Number(h.page))) return "";
-      const title = h.sectionTitle ? escapeHtml(h.sectionTitle) : "Relevant page";
-      const excerpt = h.excerpt ? escapeHtml(h.excerpt) : "";
-      return `
-        <div style="margin-top:12px;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.10);">
-          <div style="font-weight:700;">${idx + 1}. ${title} <span style="opacity:.75;">(p.${h.page})</span></div>
-          ${excerpt ? `<div style="opacity:.85;font-size:12px;margin-top:8px;white-space:pre-wrap;">"${excerpt}"</div>` : ``}
-        </div>`;
-    })
-    .join("");
-
-  const moreBtn = done
-    ? ""
-    : `<div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
-         <button id="askMoreBtn">Search more</button>
-         <span style="opacity:.75;font-size:12px;">Scanning… ${Math.min(askScanState?.nextPage || 1, pageCount)}/${pageCount}</span>
-       </div>`;
-
-  const footer = `<div style="opacity:.75;margin-top:12px;">Safety: Always verify in the official POH/AFM.</div>`;
-
-  if (askOutput) askOutput.innerHTML = header + cards + moreBtn + footer;
-
   // render small clickable cards in the right panel section
   renderBestPlaces(hits);
+
+  // Keep the answer area minimal (no big cards)
+if (askOutput) {
+  askOutput.innerHTML = `
+    <div class="sectionMeta">
+      I’ve highlighted the most relevant pages below.
+      Use <b>Jump</b> or <b>Read from here</b>.
+    </div>
+    ${
+      done
+        ? ""
+        : `<div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+             <button id="askMoreBtn">Search more</button>
+             <span style="opacity:.75;font-size:12px;">Scanning… ${Math.min(askScanState?.scannedPages || 0, pdfDoc?.numPages || 0)}/${pdfDoc?.numPages || 0}</span>
+           </div>`
+    }
+  `;
+}
 
   // optional "Search more" button
   const more = document.getElementById("askMoreBtn");
