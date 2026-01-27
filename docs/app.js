@@ -1499,9 +1499,16 @@ window.addEventListener("DOMContentLoaded", async () => {
 // Theme toggle (light/dark)
 const themeBtn = document.getElementById("themeToggle");
 
+function updateThemeIcon() {
+  if (!themeBtn) return;
+
+  const isLight = document.body.classList.contains("theme-light");
+  themeBtn.textContent = isLight ? "☀️" : "🌙";
+}
+
 function applyTheme(mode) {
   document.body.classList.toggle("theme-light", mode === "light");
-  if (themeBtn) themeBtn.textContent = (mode === "light") ? "☀️" : "🌙";
+  updateThemeIcon();
 }
 
 function getSavedTheme() {
@@ -1512,15 +1519,27 @@ function setSavedTheme(mode) {
   localStorage.setItem("pohTheme", mode);
 }
 
+function getSystemTheme() {
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
 (function initTheme() {
   const saved = getSavedTheme();
+
   if (saved === "light" || saved === "dark") {
     applyTheme(saved);
   } else {
-    // default = dark (your current design)
-    applyTheme("dark");
+    // no saved preference → follow system
+    applyTheme(getSystemTheme());
   }
 })();
+
+const media = window.matchMedia("(prefers-color-scheme: light)");
+media.addEventListener?.("change", () => {
+  const saved = getSavedTheme();
+  if (saved === "light" || saved === "dark") return; // user preference wins
+  applyTheme(getSystemTheme());
+});
 
 themeBtn?.addEventListener("click", () => {
   const isLight = document.body.classList.contains("theme-light");
