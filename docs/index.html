@@ -14,26 +14,27 @@
   <input id="file" class="hiddenFile" type="file" accept="application/pdf" />
 
   <header class="topbar">
-    <div class="brand">
-      <img src="./logo.png" alt="POH Reader logo" />
-      <div class="brandText">
-        <div class="brandTitle">POH Reader</div>
-        <div class="brandSub">Offline POH / OM reader • Search • Listen</div>
-      </div>
+  <div class="brand">
+    <img src="./logo.png" alt="POH Reader logo" />
+    <div class="brandText">
+      <div class="brandTitle">POH Reader</div>
+      <div class="brandSub">Offline POH / OM reader • Search • Listen</div>
     </div>
+  </div>
 
-    <button 
-    id="themeToggle" 
-    class="iconBtn"
-    title="Toggle light / dark" 
-    aria-label="Toggle theme">
-  >🌙</button>
+  <div class="row topActions">
+    <button
+      id="themeToggle"
+      class="iconBtn"
+      title="Toggle light / dark"
+      aria-label="Toggle theme"
+      type="button"
+    >🌙</button>
 
-    <div class="row topActions">
-      <button id="uploadBtn" class="uploadBtn">+ Upload POH / OM</button>
-      <div id="pageInfo" class="pageInfo">Page: – / –</div>
-    </div>
-  </header>
+    <button id="uploadBtn" class="uploadBtn">+ Upload POH / OM</button>
+    <div id="pageInfo" class="pageInfo">Page: – / –</div>
+  </div>
+</header>
 
   <main>
     <!-- LEFT -->
