@@ -1,3 +1,53 @@
+/* =========================
+   THEME TOKENS (Dark default)
+   ========================= */
+:root{
+  color-scheme: dark;
+
+  --bg: #0b1220;
+  --panel: rgba(16,18,22,0.92);
+  --panelSolid: #101216;
+
+  --card: rgba(255,255,255,0.04);
+  --card2: rgba(255,255,255,0.06);
+
+  --border: rgba(255,255,255,0.10);
+  --border2: rgba(255,255,255,0.08);
+
+  --text: #e9edf3;
+  --muted: #9aa4b2;
+
+  --accent: #4da3ff;
+
+  --shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+
+/* =========================
+   LIGHT MODE (Auto)
+   ========================= */
+@media (prefers-color-scheme: light){
+  :root{
+    color-scheme: light;
+
+    --bg: #f4f6f9;
+    --panel: rgba(255,255,255,0.92);
+    --panelSolid: #ffffff;
+
+    --card: rgba(15,23,42,0.04);
+    --card2: rgba(15,23,42,0.06);
+
+    --border: rgba(15,23,42,0.12);
+    --border2: rgba(15,23,42,0.10);
+
+    --text: #0f172a;
+    --muted: #475569;
+
+    --accent: #2563eb;
+
+    --shadow: 0 10px 30px rgba(15,23,42,0.15);
+  }
+}
+
 :root{
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   --dockH: 96px;
@@ -5,8 +55,8 @@
 
 body{
   margin:0;
-  background:#0e1622;
-  color:#e8eef7;
+  background: var(--bg);
+  color: var(--text);
   padding-bottom: calc(var(--dockH) + env(safe-area-inset-bottom));
 }
 
@@ -17,7 +67,7 @@ body{
 /* ===== TOP BAR ===== */
 .topbar{
   padding:12px 16px;
-  border-bottom:1px solid #1d2a3a;
+  border-bottom: 1px solid var(--border);
   display:flex;
   justify-content:space-between;
   align-items:center;
@@ -67,8 +117,8 @@ main{
 
 /* ===== PANELS ===== */
 .panel{
-  background:#141f2d;
-  border:1px solid #22344a;
+  background: var(--panelSolid);
+  border: 1px solid var(--border);
   border-radius:12px;
   padding:14px;
   min-height:0;
@@ -86,8 +136,8 @@ hr{ border:none; border-top:1px solid rgba(255,255,255,.08); margin:14px 0; }
 
 /* ===== VIEWER ===== */
 .viewer{
-  background:#0c1420;
-  border:1px solid #22344a;
+  background: var(--panelSolid);
+  border: 1px solid var(--border);
   border-radius:12px;
   padding:12px;
   overflow:auto;
@@ -104,10 +154,11 @@ input[type="text"], textarea, select{
   width:100%;
   padding:10px;
   border-radius:10px;
-  border:1px solid #243348;
-  background:#0b0f14;
-  color:#e8eef7;
+border: 1px solid var(--border);
+background: var(--panel);
+color: var(--text);
 }
+
 textarea{ resize:vertical; }
 select{ -webkit-appearance:none; appearance:none; }
 
@@ -115,12 +166,12 @@ select{ -webkit-appearance:none; appearance:none; }
 button{
   padding:8px 10px;
   border-radius:10px;
-  border:1px solid #2a3d57;
-  background:#162235;
-  color:#e8eef7;
-  cursor:pointer;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
 }
-button:hover:not(:disabled){ background:#1d2f47; }
+button:hover:not(:disabled){ 
+  background: var(--card2); }
 button:disabled{ opacity:.45; cursor:not-allowed; }
 
 /* ===== RESULTS / ANSWER ===== */
@@ -128,8 +179,8 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   margin-top:10px;
   padding:8px;
   border-radius:10px;
-  border:1px solid #243348;
-  background:#0b0f14;
+  border:1px solid var(--border);
+  background: var(--panel);
   max-height:40vh;
   overflow:auto;
 }
@@ -137,12 +188,13 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 .answer{
   margin-top:12px;
   white-space:pre-wrap;
-  background:#0b0f14;
-  border:1px solid #243348;
+  background: var(--panel);
+  border:1px solid var(--border);
   border-radius:12px;
   padding:12px;
   min-height:80px;
   line-height:1.35;
+  color: var(--text);
 }
 
 .safetyLine{
@@ -186,11 +238,11 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 
 .ttsControls{
   margin-top:10px;
-  background:rgba(16,18,22,.92);
-  border:1px solid rgba(255,255,255,.08);
+  background: var(--panel);
+  border:1px solid var(--border2);
   border-radius:12px;
   padding:10px;
-  backdrop-filter:blur(10px);
+  backdrop-filter: blur(10px);
 }
 
 /* These are the GOOD “jump cards” (keep them) */
@@ -240,25 +292,25 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   .panelRight{ max-height:none; overflow:visible; }
   .panelLeft{ max-height:none; overflow:visible; }
 
-  .bottomBar{
-    display:flex;
-    position:fixed;
-    left:12px;
-    right:12px;
-    bottom: calc(14px + env(safe-area-inset-bottom));
-    z-index:9999;
-    gap:10px;
+ .bottomBar{
+  display:flex;
+  position:fixed;
+  left:12px;
+  right:12px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index:9999;
+  gap:10px;
 
-    padding:12px;
-    border-radius:22px;
-    border:1px solid rgba(255,255,255,0.10);
-    background: rgba(20, 25, 35, 0.82);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-shadow: 0 14px 40px rgba(0,0,0,0.45);
-    height: var(--dockH);
-    align-items:center;
-  }
+  padding:12px;
+  border-radius:22px;
+  border:1px solid var(--border);
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 14px 40px rgba(0,0,0,0.25);
+  height: var(--dockH);
+  align-items:center;
+}
 
   .bottomBtn{
     flex:1;
