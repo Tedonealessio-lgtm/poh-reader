@@ -22,6 +22,26 @@
   --shadow: 0 10px 30px rgba(0,0,0,0.35);
 }
 
+/* Light theme (activated by body.theme-light) */
+body.theme-light{
+  color-scheme: light;
+
+  --bg: #f5f7fb;
+  --panel: rgba(255,255,255,0.92);
+  --panelSolid: #ffffff;
+
+  --card: rgba(0,0,0,0.04);
+  --card2: rgba(0,0,0,0.06);
+
+  --border: rgba(0,0,0,0.12);
+  --border2: rgba(0,0,0,0.10);
+
+  --text: #0b1220;
+  --muted: #4b5563;
+
+  --accent: #2563eb;
+}
+
 /* =========================
    LIGHT MODE (Auto)
    ========================= */

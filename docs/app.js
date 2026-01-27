@@ -1496,6 +1496,38 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   setMicStatus("Mic ready. Hold to talk.");
   refreshResumeBtn();
+// Theme toggle (light/dark)
+const themeBtn = document.getElementById("themeToggle");
+
+function applyTheme(mode) {
+  document.body.classList.toggle("theme-light", mode === "light");
+  if (themeBtn) themeBtn.textContent = (mode === "light") ? "☀️" : "🌙";
+}
+
+function getSavedTheme() {
+  return localStorage.getItem("pohTheme"); // "light" | "dark" | null
+}
+
+function setSavedTheme(mode) {
+  localStorage.setItem("pohTheme", mode);
+}
+
+(function initTheme() {
+  const saved = getSavedTheme();
+  if (saved === "light" || saved === "dark") {
+    applyTheme(saved);
+  } else {
+    // default = dark (your current design)
+    applyTheme("dark");
+  }
+})();
+
+themeBtn?.addEventListener("click", () => {
+  const isLight = document.body.classList.contains("theme-light");
+  const next = isLight ? "dark" : "light";
+  applyTheme(next);
+  setSavedTheme(next);
+});
 });
 
 // Debug helpers
