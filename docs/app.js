@@ -162,6 +162,14 @@ const resumeReadBtn = $("resumeReadBtn");
 const voiceSelect = $("voiceSelect");
 const speedRange = $("speedRange");
 
+// Bottom bar "Read page" delegates to the main Read Page TTS button
+// (keeps one single, reliable TTS entry point)
+const bottomReadBtn = $("bottomSearch"); // still id="bottomSearch"
+
+bottomReadBtn?.addEventListener("click", () => {
+  readPageBtn?.click();
+});
+
 // =====================================================
 // State
 // =====================================================
