@@ -195,10 +195,16 @@ let searchCancelToken = { cancel: false };
 // TTS
 let voices = [];
 let ttsSpeaking = false;
+let ttsRunId = 0;          // increases each time we start a new reading
+let ttsUserStopped = false; // true only when user pressed Stop
+let currentUtterance = null; // keep reference (prevents GC quirks)
 let lastReadProgress = null; // { page, key, offset, label, started? }
 let ttsWasCancelled = false;
-let ttsUserStopped = false; // user pressed Stop (important for iOS recovery)
 let ttsKeepProgressOnCancel = false;
+
+function isStaleRun(runId) {
+  return runId !== ttsRunId;
+}
 
 if (resumeReadBtn) resumeReadBtn.disabled = true;
 
@@ -875,20 +881,80 @@ function refreshVoices() {
   voices = window.speechSynthesis?.getVoices?.() || [];
   if (!voiceSelect) return;
 
+  // Helper: normalize
+  const norm = (s) => String(s || "").toLowerCase();
+
+  // 1) Keep mostly English voices (plus a small fallback set)
+  const preferredLangPrefixes = ["en-"];
+  const fallbackAllowNames = [
+    "Daniel", "Samantha", "Alex", "Karen", "Moira", "Tessa", "Serena",
+    "Oliver", "Thomas", "Arthur", "Rishi", "George"
+  ].map(norm);
+
+  let filtered = voices.filter(v => {
+    const lang = norm(v.lang);
+    const name = norm(v.name);
+    const isEnglish = preferredLangPrefixes.some(p => lang.startsWith(p));
+    const isFallbackGood = fallbackAllowNames.includes(name);
+    return isEnglish || isFallbackGood;
+  });
+
+  // 2) Sort: Daniel first, then known nice voices
+  const preferredOrder = [
+    "daniel",
+    "samantha",
+    "alex",
+    "karen",
+    "moira",
+    "tessa",
+    "serena",
+    "oliver",
+    "thomas",
+    "arthur",
+    "rishi",
+    "george",
+  ];
+
+  filtered.sort((a, b) => {
+    const an = norm(a.name);
+    const bn = norm(b.name);
+
+    const ai = preferredOrder.indexOf(an);
+    const bi = preferredOrder.indexOf(bn);
+
+    if (ai !== -1 || bi !== -1) {
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    }
+
+    const aGB = norm(a.lang).startsWith("en-gb");
+    const bGB = norm(b.lang).startsWith("en-gb");
+    if (aGB !== bGB) return aGB ? -1 : 1;
+
+    return an.localeCompare(bn);
+  });
+
+  // 3) Fill the select
   voiceSelect.innerHTML = "";
-  for (const v of voices) {
+  for (const v of filtered) {
     const opt = document.createElement("option");
     opt.value = v.name;
     opt.textContent = `${v.name} (${v.lang})`;
     voiceSelect.appendChild(opt);
   }
 
-  const best = pickBestVoiceForLang("en");
+  // 4) Default selection
+  const daniel = filtered.find(v => norm(v.name) === "daniel" && norm(v.lang).startsWith("en-gb"));
+  const anyDaniel = filtered.find(v => norm(v.name) === "daniel");
+  const best = daniel || anyDaniel || pickBestVoiceForLang("en");
   if (best) voiceSelect.value = best.name;
 }
 
 function stopTts({ keepProgress = true } = {}) {
   ttsUserStopped = true;
+  ttsRunId++;
+
   setTimeout(() => (ttsUserStopped = false), 400);
 
   try {
@@ -926,8 +992,16 @@ function chunkText(text, maxLen = 220) {
   return chunks.filter(Boolean);
 }
 
+function guessLang(text) {
+  const t = String(text || "");
+  // quick & dirty: German umlauts / ß = likely German
+  if (/[äöüßÄÖÜ]/.test(t)) return "de";
+  return "en";
+}
+
 async function speakChunked(text, { page, label } = {}, { resume = false } = {}) {
   ttsUserStopped = false;   // ✅ RESET USER-STOP FLAG (CRITICAL)
+  const myRunId = ++ttsRunId;
 
   const cleaned = String(text || "").trim();
   if (!cleaned) return;
@@ -947,10 +1021,12 @@ async function speakChunked(text, { page, label } = {}, { resume = false } = {})
   lastReadProgress = { page, key, offset, label, started: false };
   refreshResumeBtn();
 
-  const v = getSelectedVoice() || pickBestVoiceForLang("en");
+  const v = getSelectedVoice() || pickBestVoiceForLang(guessLang(text));
   const rate = Number(speedRange?.value || 1.0);
 
   const speakNext = () => {
+    if (myRunId !== ttsRunId) return;
+      if (ttsUserStopped) return;
     if (!chunks.length) {
       ttsSpeaking = false;
       refreshResumeBtn();
@@ -959,6 +1035,7 @@ async function speakChunked(text, { page, label } = {}, { resume = false } = {})
 
     const chunk = chunks.shift();
     const u = new SpeechSynthesisUtterance(chunk);
+    currentUtterance = u; // keep reference
     if (v) u.voice = v;
     u.rate = Number.isFinite(rate) ? rate : 1.0;
 
@@ -1499,63 +1576,63 @@ window.addEventListener("DOMContentLoaded", async () => {
     window.speechSynthesis.onvoiceschanged = refreshVoices;
   }
 
+  if (speedRange) speedRange.value = "0.9";
+
   await refreshLibrarySelectUI();
   await restoreLastPdfOnStartup();
 
   setMicStatus("Mic ready. Hold to talk.");
   refreshResumeBtn();
-// Theme toggle (light/dark)
+
+  // Theme toggle (light/dark)
+const THEME_KEY = "pohTheme";
+const root = document.documentElement;
 const themeBtn = document.getElementById("themeToggle");
 
 function updateThemeIcon() {
   if (!themeBtn) return;
-
-  const isLight = document.body.classList.contains("theme-light");
-  themeBtn.textContent = isLight ? "☀️" : "🌙";
+  const isDark = root.getAttribute("data-theme") === "dark";
+  themeBtn.textContent = isDark ? "🌙" : "☀️";
 }
 
 function applyTheme(mode) {
-  document.body.classList.toggle("theme-light", mode === "light");
+  // mode: "light" or "dark"
+  if (mode === "dark") root.setAttribute("data-theme", "dark");
+  else root.removeAttribute("data-theme"); // light = default
+
+  localStorage.setItem(THEME_KEY, mode);
   updateThemeIcon();
 }
 
 function getSavedTheme() {
-  return localStorage.getItem("pohTheme"); // "light" | "dark" | null
-}
-
-function setSavedTheme(mode) {
-  localStorage.setItem("pohTheme", mode);
+  const v = localStorage.getItem(THEME_KEY);
+  return v === "dark" || v === "light" ? v : null;
 }
 
 function getSystemTheme() {
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
-(function initTheme() {
+function initTheme() {
+  // 1) apply saved or system
   const saved = getSavedTheme();
+  applyTheme(saved || getSystemTheme());
 
-  if (saved === "light" || saved === "dark") {
-    applyTheme(saved);
-  } else {
-    // no saved preference → follow system
+  // 2) react to system changes ONLY if user has not chosen a theme
+  const media = window.matchMedia("(prefers-color-scheme: light)");
+  media.addEventListener?.("change", () => {
+    if (getSavedTheme()) return; // user preference wins
     applyTheme(getSystemTheme());
-  }
-})();
+  });
 
-const media = window.matchMedia("(prefers-color-scheme: light)");
-media.addEventListener?.("change", () => {
-  const saved = getSavedTheme();
-  if (saved === "light" || saved === "dark") return; // user preference wins
-  applyTheme(getSystemTheme());
-});
+  // 3) user toggle
+  themeBtn?.addEventListener("click", () => {
+    const isDark = root.getAttribute("data-theme") === "dark";
+    applyTheme(isDark ? "light" : "dark");
+  });
+}
 
-themeBtn?.addEventListener("click", () => {
-  const isLight = document.body.classList.contains("theme-light");
-  const next = isLight ? "dark" : "light";
-  applyTheme(next);
-  setSavedTheme(next);
-});
-});
+initTheme();
 
 // Debug helpers
 window.__POH = window.__POH || {};
@@ -1563,11 +1640,14 @@ window.__POH.getPageTextForTts = getPageTextForTts;
 window.__POH.pageNum = () => pageNum;
 window.__POH.renderBestPlaces = renderBestPlaces;
 
-// Register Service Worker (GitHub Pages–safe)
+// Register Service Worker (GitHub Pages-safe)
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js")
+    navigator.serviceWorker
+      .register("./sw.js")
       .then((reg) => console.log("[SW] registered:", reg.scope))
       .catch((err) => console.error("[SW] registration failed:", err));
   });
 }
+
+});
