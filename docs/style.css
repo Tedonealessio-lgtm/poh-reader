@@ -97,14 +97,16 @@ body{
 .brand{
   display:flex;
   align-items:center;
-  gap:14px;                 
+  gap:12px;                 
   min-width: 240px;         
 }
 
-.brand img{
-  height:64px;              
-  width:auto;
-  display:block;
+.brand .appLogo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 10px;
+  flex: 0 0 auto;
 }
 
 .topActions{
