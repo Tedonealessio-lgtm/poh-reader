@@ -1590,6 +1590,10 @@ function lockPilot() {
   console.log("Pilot subscription locked");
 }
 
+// Expose helpers for DevTools / testing
+window.unlockPilot = unlockPilot;
+window.lockPilot = lockPilot;
+
 function showPaywall(featureName = "this feature") {
   const overlay = document.getElementById("paywallOverlay");
   const msg = document.getElementById("paywallMsg");
