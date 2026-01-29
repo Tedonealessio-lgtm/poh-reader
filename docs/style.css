@@ -22,8 +22,8 @@
   --shadow: 0 10px 30px rgba(0,0,0,0.35);
 }
 
-/* Light theme (activated by body.theme-light) */
-body.theme-light{
+/* Light theme (default) */
+:root {
   color-scheme: light;
 
   --bg: #f5f7fb;
@@ -40,6 +40,26 @@ body.theme-light{
   --muted: #4b5563;
 
   --accent: #2563eb;
+}
+
+/* Dark theme */
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0b0f14;
+  --panel: rgba(20,22,28,0.92);
+  --panelSolid: #111318;
+
+  --card: rgba(255,255,255,0.06);
+  --card2: rgba(255,255,255,0.10);
+
+  --border: rgba(255,255,255,0.16);
+  --border2: rgba(255,255,255,0.12);
+
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+
+  --accent: #60a5fa;
 }
 
 /* =========================
@@ -415,4 +435,71 @@ body.tts-active .bottomBar{ display:none !important; }
   padding: 10px 12px;
   border-radius: 12px;
   min-height: 40px;     /* bigger tap area */
+}
+
+/* ================================
+   Pilot Subscription – Paywall
+   ================================ */
+
+.overlay[hidden] {
+  display: none !important;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 9999;
+}
+
+.modalCard {
+  width: min(520px, 100%);
+  background: var(--panelSolid);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 14px 14px 16px;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.modalTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.modalBody {
+  color: var(--text);
+}
+
+.modalList {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  opacity: 0.95;
+}
+
+.textInput {
+  flex: 1;
+  min-width: 180px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+}
+
+.textInput:focus {
+  border-color: var(--accent);
 }

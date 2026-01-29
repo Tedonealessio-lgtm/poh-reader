@@ -809,6 +809,7 @@ async function runLocalAskIncremental(question, { timeBudgetMs = 1200, maxReturn
 }
 
 async function handleAsk() {
+  if (!requirePaid("Ask")) return;
   const q = (questionEl?.value || "").trim();
   if (!q) return;
 
@@ -837,14 +838,10 @@ async function handleAsk() {
 
   if (answerEl) {
     answerEl.innerHTML = `
-      <div class="sectionMeta">
-        I’ve highlighted the most relevant pages below.
-        Use <b>Jump</b> or <b>Read from here</b>.
-      </div>
       ${
         done
           ? ""
-          : `<div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+          : `<div style="margin-top:6px;display:flex;align-items:center;gap:10px;">
                <button id="askMoreBtn">Search more</button>
                <span style="opacity:.75;font-size:12px;">Scanning…</span>
              </div>`
@@ -1516,8 +1513,15 @@ searchInput?.addEventListener("keydown", async (e) => {
 
 askBtn?.addEventListener("click", handleAsk);
 
-readPageBtn?.addEventListener("click", readCurrentPage);
-readSectionBtn?.addEventListener("click", readCurrentSection);
+readPageBtn?.addEventListener("click", () => {
+  if (!requirePaid("Read aloud")) return;
+  readCurrentPage();
+});
+
+readSectionBtn?.addEventListener("click", () => {
+  if (!requirePaid("Read aloud")) return;
+  readCurrentSection();
+});
 
 stopReadBtn?.addEventListener("click", () => {
   stopTts({ keepProgress: true });
@@ -1564,12 +1568,92 @@ if (micBtn) {
   micBtn.addEventListener("pointerleave", endHold);
 }
 
+// ================================
+// Pilot Subscription (paid gating)
+// ================================
+const PAID_KEY = "pohPilotPaid"; // "1" = paid, null = not paid
+
+function isPaidUser() {
+  return localStorage.getItem(PAID_KEY) === "1";
+}
+
+// TEMP helper (for manual unlock during testing)
+// Call from console: unlockPilot()
+function unlockPilot() {
+  localStorage.setItem(PAID_KEY, "1");
+  console.log("Pilot subscription unlocked");
+}
+
+// TEMP helper (lock again if needed)
+function lockPilot() {
+  localStorage.removeItem(PAID_KEY);
+  console.log("Pilot subscription locked");
+}
+
+function showPaywall(featureName = "this feature") {
+  const overlay = document.getElementById("paywallOverlay");
+  const msg = document.getElementById("paywallMsg");
+  const unlockRow = document.getElementById("paywallUnlockRow");
+  const code = document.getElementById("paywallCode");
+
+  if (msg) msg.textContent = `To use ${featureName}, please subscribe to Pilot Subscription.`;
+  unlockRow?.setAttribute("hidden", "");
+  if (code) code.value = "";
+
+  overlay?.removeAttribute("hidden");
+}
+
+function requirePaid(featureName) {
+  if (isPaidUser()) return true;
+  showPaywall(featureName);
+  return false;
+}
+
 // =====================================================
 // Startup
 // =====================================================
 window.addEventListener("DOMContentLoaded", async () => {
   enablePdfDependentControls(false);
   setPageInfo();
+
+  // Paywall modal wiring
+const paywallOverlay = document.getElementById("paywallOverlay");
+const paywallCloseBtn = document.getElementById("paywallCloseBtn");
+const paywallSubscribeBtn = document.getElementById("paywallSubscribeBtn");
+const paywallUnlockBtn = document.getElementById("paywallUnlockBtn");
+const paywallUnlockRow = document.getElementById("paywallUnlockRow");
+const paywallApplyCodeBtn = document.getElementById("paywallApplyCodeBtn");
+const paywallCode = document.getElementById("paywallCode");
+
+function closePaywall() {
+  paywallOverlay?.setAttribute("hidden", "");
+}
+
+paywallCloseBtn?.addEventListener("click", closePaywall);
+
+paywallOverlay?.addEventListener("click", (e) => {
+  if (e.target === paywallOverlay) closePaywall(); // click outside closes
+});
+
+paywallSubscribeBtn?.addEventListener("click", () => {
+  // TODO: Replace with Stripe Payment Link
+  alert("Stripe link goes here.");
+});
+
+paywallUnlockBtn?.addEventListener("click", () => {
+  paywallUnlockRow?.removeAttribute("hidden");
+  paywallCode?.focus();
+});
+
+paywallApplyCodeBtn?.addEventListener("click", () => {
+  const code = (paywallCode?.value || "").trim();
+  if (code === "PILOT2026") {
+    unlockPilot();
+    closePaywall();
+  } else {
+    alert("Invalid code.");
+  }
+});
 
   if ("speechSynthesis" in window) {
     refreshVoices();
@@ -1584,51 +1668,67 @@ window.addEventListener("DOMContentLoaded", async () => {
   setMicStatus("Mic ready. Hold to talk.");
   refreshResumeBtn();
 
-  // Theme toggle (light/dark)
-const THEME_KEY = "pohTheme";
+// Theme toggle (Auto / Light / Dark)
+const THEME_KEY = "pohTheme"; // store: "auto" | "light" | "dark"
 const root = document.documentElement;
 const themeBtn = document.getElementById("themeToggle");
-
-function updateThemeIcon() {
-  if (!themeBtn) return;
-  const isDark = root.getAttribute("data-theme") === "dark";
-  themeBtn.textContent = isDark ? "🌙" : "☀️";
-}
-
-function applyTheme(mode) {
-  // mode: "light" or "dark"
-  if (mode === "dark") root.setAttribute("data-theme", "dark");
-  else root.removeAttribute("data-theme"); // light = default
-
-  localStorage.setItem(THEME_KEY, mode);
-  updateThemeIcon();
-}
-
-function getSavedTheme() {
-  const v = localStorage.getItem(THEME_KEY);
-  return v === "dark" || v === "light" ? v : null;
-}
 
 function getSystemTheme() {
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
-function initTheme() {
-  // 1) apply saved or system
-  const saved = getSavedTheme();
-  applyTheme(saved || getSystemTheme());
+function getSavedTheme() {
+  const v = localStorage.getItem(THEME_KEY);
+  return (v === "auto" || v === "light" || v === "dark") ? v : "auto";
+}
 
-  // 2) react to system changes ONLY if user has not chosen a theme
+function applyTheme(mode) {
+  // mode: "auto" | "light" | "dark"
+  const effective = (mode === "auto") ? getSystemTheme() : mode;
+
+  if (effective === "dark") root.setAttribute("data-theme", "dark");
+  else root.removeAttribute("data-theme"); // light default
+
+  localStorage.setItem(THEME_KEY, mode);
+  updateThemeIcon(mode, effective);
+}
+
+function updateThemeIcon(mode, effective) {
+  if (!themeBtn) return;
+
+  // Icon shows effective theme, but we also hint mode
+  const icon = (effective === "dark") ? "🌙" : "☀️";
+
+  // If you want super clean: only icon
+  themeBtn.textContent = icon;
+
+  // Optional: tooltip explains state
+  themeBtn.title = `Theme: ${mode.toUpperCase()} (${effective})`;
+  themeBtn.setAttribute("aria-label", `Theme ${mode}, currently ${effective}`);
+}
+
+function nextMode(mode) {
+  // cycle: auto -> light -> dark -> auto
+  if (mode === "auto") return "light";
+  if (mode === "light") return "dark";
+  return "auto";
+}
+
+function initTheme() {
+  // 1) apply saved mode
+  applyTheme(getSavedTheme());
+
+  // 2) react to system changes ONLY if mode is auto
   const media = window.matchMedia("(prefers-color-scheme: light)");
   media.addEventListener?.("change", () => {
-    if (getSavedTheme()) return; // user preference wins
-    applyTheme(getSystemTheme());
+    if (getSavedTheme() !== "auto") return;
+    applyTheme("auto");
   });
 
-  // 3) user toggle
+  // 3) user toggle cycles modes
   themeBtn?.addEventListener("click", () => {
-    const isDark = root.getAttribute("data-theme") === "dark";
-    applyTheme(isDark ? "light" : "dark");
+    const mode = getSavedTheme();
+    applyTheme(nextMode(mode));
   });
 }
 

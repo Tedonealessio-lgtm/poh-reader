@@ -149,6 +149,42 @@
     <button id="bottomNext" class="bottomBtn">▶</button>
   </nav>
 
-  <script type="module" src="./app.js"></script>
+  <!-- Pilot Subscription Paywall Modal -->
+<div id="paywallOverlay" class="overlay" hidden>
+  <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="paywallTitle">
+    <div class="modalHeader">
+      <div id="paywallTitle" class="modalTitle">Pilot Subscription</div>
+      <button id="paywallCloseBtn" class="iconBtn" type="button" aria-label="Close">✕</button>
+    </div>
+
+    <div class="modalBody">
+      <p id="paywallMsg" class="muted" style="margin-top:0;">
+        This feature requires Pilot Subscription.
+      </p>
+
+      <ul class="modalList">
+        <li><b>Ask</b> – guidance + “Best places to look”</li>
+        <li><b>Read aloud</b> – page/section audio with Resume</li>
+      </ul>
+
+      <div class="row" style="gap:10px; margin-top:14px;">
+        <button id="paywallSubscribeBtn" class="primaryBtn" type="button">Subscribe</button>
+        <button id="paywallUnlockBtn" class="uploadBtn" type="button">I already subscribed</button>
+      </div>
+
+      <div id="paywallUnlockRow" class="row" style="gap:10px; margin-top:12px;" hidden>
+        <input id="paywallCode" class="textInput" type="text" placeholder="Enter unlock code" />
+        <button id="paywallApplyCodeBtn" class="uploadBtn" type="button">Unlock</button>
+      </div>
+
+      <p class="muted" style="font-size:12px; margin-top:12px;">
+        Manuals stay on your device. No upload required.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./app.js"></script>
+
 </body>
 </html>
