@@ -102,10 +102,10 @@ body{
 }
 
 .brand .appLogo {
-  width: 56px;
-  height: 56px;
+  width: 72px;
+  height: 72px;
   object-fit: contain;
-  border-radius: 10px;
+  border-radius: 12px;
   flex: 0 0 auto;
 }
 
@@ -334,10 +334,12 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 .bottomBar{ display:none; }
 
 @media (max-width: 768px){
-  .brand img {
-    height: 72px;
-    width: 72px;
+  .brand .appLogo{
+    width: 80px;
+    height: 80px;
     object-fit: contain;
+    border-radius: 12px;
+    flex: 0 0 auto;
   }
 }
 
