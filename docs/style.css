@@ -97,7 +97,7 @@ body{
 .brand{
   display:flex;
   align-items:center;
-  gap:12px;                 
+  gap:14px;                 
   min-width: 240px;         
 }
 
@@ -334,8 +334,12 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 .bottomBar{ display:none; }
 
 @media (max-width: 768px){
-  /* bigger logo on mobile */
-  .brand img{ height:64px; }
+  .brand img {
+    height: 72px;
+    width: 72px;
+    object-fit: contain;
+  }
+}
 
   /* allow normal scrolling on mobile */
   .panelRight{ max-height:none; overflow:visible; }
@@ -371,7 +375,6 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
     border:1px solid rgba(255,255,255,0.10);
   }
   .bottomBtn.primary{ flex:1.25; }
-}
 
 /* Hide dock while TTS “block” is focused/active (optional) */
 body.tts-active .bottomBar{ display:none !important; }
