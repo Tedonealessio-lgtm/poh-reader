@@ -1633,11 +1633,16 @@ const SUBSCRIBE_URL = "https://buy.stripe.com/5kQaEXccuguagFt6yo6AM00";
   }
 
   closeBtn?.addEventListener("click", hidePaywall);
+closeBtn?.addEventListener("pointerup", hidePaywall);
+closeBtn?.addEventListener("touchend", (e) => { e.preventDefault(); hidePaywall(); }, { passive: false });
 
   // Tap outside closes
-  overlay?.addEventListener("click", (e) => {
-    if (e.target === overlay) hidePaywall();
-  });
+overlay?.addEventListener("pointerdown", (e) => {
+  if (e.target === overlay) hidePaywall();
+});
+overlay?.addEventListener("click", (e) => {
+  if (e.target === overlay) hidePaywall();
+});
 
   // Reveal unlock only when requested
   alreadyBtn?.addEventListener("click", () => {
