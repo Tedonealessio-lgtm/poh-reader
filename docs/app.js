@@ -1623,6 +1623,7 @@ const SUBSCRIBE_URL = "https://buy.stripe.com/5kQaEXccuguagFt6yo6AM00";
   const alreadyBtn = document.getElementById("paywallAlreadyBtn");
   const unlockRow = document.getElementById("paywallUnlockRow");
   const codeInput = document.getElementById("paywallCode");
+  const unlockBtn = document.getElementById("paywallUnlockBtn");
 
   if (subscribeBtn) subscribeBtn.href = SUBSCRIBE_URL;
 
@@ -1631,6 +1632,32 @@ const SUBSCRIBE_URL = "https://buy.stripe.com/5kQaEXccuguagFt6yo6AM00";
     unlockRow?.setAttribute("hidden", "");
     if (codeInput) codeInput.value = "";
   }
+
+  unlockBtn?.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const raw = (codeInput?.value || "").trim();
+  const code = raw.toUpperCase();
+
+  // ✅ TEMP: accept your test code
+  if (code !== "POH-PILOT-001") {
+    alert("Invalid code. Please paste the code you received after subscribing.");
+    return;
+  }
+
+  // ✅ THIS is what makes it persist
+  localStorage.setItem(PAID_KEY, "1");
+
+  // ✅ close + refresh UI
+  hidePaywall();
+  enablePdfDependentControls(true);
+
+  // extra safety for iOS tap weirdness
+  setTimeout(() => {
+    overlay?.setAttribute("hidden", "");
+  }, 0);
+});
 
   closeBtn?.addEventListener("click", hidePaywall);
 closeBtn?.addEventListener("pointerup", hidePaywall);
@@ -1713,21 +1740,34 @@ if (paywallUnlockBtn) {
 }
 
 if (paywallApplyCodeBtn) {
-  paywallApplyCodeBtn.addEventListener("click", () => {
-    const code = ((paywallCode && paywallCode.value) ? paywallCode.value : "").trim();
-    if (code === "PILOT2026") {
-      unlockPilot();
-      closePaywall();
-    } else {
-      alert("Invalid code.");
-    }
-  });
-}
+  paywallApplyCodeBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-// subscribe button optional: only wire if you have it
-if (paywallSubscribeBtn) {
-  paywallSubscribeBtn.addEventListener("click", () => {
-    // TODO: open Stripe link
+    const raw = (paywallCode?.value || "").trim();
+    const code = raw.toUpperCase();
+
+    // ✅ accept your current manual code
+    if (code !== "POH-PILOT-001") {
+      alert("Invalid code. Please paste the code you received after subscribing.");
+      return;
+    }
+
+    // ✅ persist paid state (THIS is what makes it stick)
+    localStorage.setItem(PAID_KEY, "1");
+
+    // ✅ close modal
+    closePaywall?.();              // if you have closePaywall()
+    // OR if your function is named hidePaywall():
+    // hidePaywall?.();
+
+    // ✅ enable paid controls immediately
+    enablePdfDependentControls(true);
+
+    // tiny iOS safety (prevents “needs 2 taps”)
+    setTimeout(() => {
+      paywallOverlay?.setAttribute("hidden", "");
+    }, 0);
   });
 }
 
