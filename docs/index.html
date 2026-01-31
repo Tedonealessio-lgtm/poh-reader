@@ -150,36 +150,42 @@
   </nav>
 
   <!-- Pilot Subscription Paywall Modal -->
-<div id="paywallOverlay" class="overlay" hidden>
-  <div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="paywallTitle">
-    <div class="modalHeader">
-      <div id="paywallTitle" class="modalTitle">Pilot Subscription</div>
-      <button id="paywallCloseBtn" class="iconBtn" type="button" aria-label="Close">✕</button>
+<!-- Paywall -->
+<div id="paywallOverlay" hidden>
+  <div id="paywallModal" role="dialog" aria-modal="true" aria-labelledby="paywallTitle">
+    <button id="paywallClose" class="paywallClose" aria-label="Close">×</button>
+
+    <h3 id="paywallTitle">Pilot Subscription</h3>
+
+    <p id="paywallMsg" class="paywallMsg">
+      Unlock this feature with Pilot Subscription (7,99 €).
+    </p>
+
+    <ul class="paywallList">
+      <li><b>Ask</b> — guidance + “Best places to look”</li>
+      <li><b>Read aloud</b> — page/section audio with Resume</li>
+    </ul>
+
+    <div class="paywallActions">
+      <a id="paywallSubscribeBtn" class="btnPrimary" href="#" target="_blank" rel="noopener">
+        Subscribe — 7,99 €
+      </a>
+
+      <button id="paywallAlreadyBtn" class="btnLink" type="button">
+        I already subscribed
+      </button>
     </div>
 
-    <div class="modalBody">
-      <p id="paywallMsg" class="muted" style="margin-top:0;">
-        This feature requires Pilot Subscription.
-      </p>
+    <div id="paywallUnlockRow" class="unlockRow" hidden>
+      <label class="srOnly" for="paywallCode">Unlock code</label>
+      <input id="paywallCode" type="text" inputmode="text" autocomplete="one-time-code"
+             placeholder="Enter unlock code" />
+      <button id="paywallUnlockBtn" class="btnSecondary" type="button">Unlock</button>
+      <div id="paywallUnlockHint" class="unlockHint">Tip: paste the code you received after subscribing.</div>
+    </div>
 
-      <ul class="modalList">
-        <li><b>Ask</b> – guidance + “Best places to look”</li>
-        <li><b>Read aloud</b> – page/section audio with Resume</li>
-      </ul>
-
-      <div class="row" style="gap:10px; margin-top:14px;">
-        <button id="paywallSubscribeBtn" class="primaryBtn" type="button">Subscribe</button>
-        <button id="paywallUnlockBtn" class="uploadBtn" type="button">I already subscribed</button>
-      </div>
-
-      <div id="paywallUnlockRow" class="row" style="gap:10px; margin-top:12px;" hidden>
-        <input id="paywallCode" class="textInput" type="text" placeholder="Enter unlock code" />
-        <button id="paywallApplyCodeBtn" class="uploadBtn" type="button">Unlock</button>
-      </div>
-
-      <p class="muted" style="font-size:12px; margin-top:12px;">
-        Manuals stay on your device. No upload required.
-      </p>
+    <div class="paywallFooter">
+      Manuals stay on your device. No upload required.
     </div>
   </div>
 </div>

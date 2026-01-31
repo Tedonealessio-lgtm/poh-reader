@@ -1600,7 +1600,7 @@ function showPaywall(featureName = "this feature") {
   const unlockRow = document.getElementById("paywallUnlockRow");
   const code = document.getElementById("paywallCode");
 
-  if (msg) msg.textContent = `To use ${featureName}, please subscribe to Pilot Subscription.`;
+  if (msg) msg.textContent = `Unlock ${featureName} with Pilot Subscription (7,99 € / month).`;
   unlockRow?.setAttribute("hidden", "");
   if (code) code.value = "";
 
@@ -1613,6 +1613,46 @@ function requirePaid(featureName) {
   return false;
 }
 
+// Paywall UI wiring
+const SUBSCRIBE_URL = "https://buy.stripe.com/5kQaEXccuguagFt6yo6AM00";
+
+(function initPaywallUI() {
+  const overlay = document.getElementById("paywallOverlay");
+  const closeBtn = document.getElementById("paywallClose");
+  const subscribeBtn = document.getElementById("paywallSubscribeBtn");
+  const alreadyBtn = document.getElementById("paywallAlreadyBtn");
+  const unlockRow = document.getElementById("paywallUnlockRow");
+  const codeInput = document.getElementById("paywallCode");
+
+  if (subscribeBtn) subscribeBtn.href = SUBSCRIBE_URL;
+
+  function hidePaywall() {
+    overlay?.setAttribute("hidden", "");
+    unlockRow?.setAttribute("hidden", "");
+    if (codeInput) codeInput.value = "";
+  }
+
+  closeBtn?.addEventListener("click", hidePaywall);
+
+  // Tap outside closes
+  overlay?.addEventListener("click", (e) => {
+    if (e.target === overlay) hidePaywall();
+  });
+
+  // Reveal unlock only when requested
+  alreadyBtn?.addEventListener("click", () => {
+    unlockRow?.removeAttribute("hidden");
+    setTimeout(() => codeInput?.focus(), 50);
+  });
+
+  // iPhone keyboard: keep input visible
+  codeInput?.addEventListener("focus", () => {
+    setTimeout(() => codeInput.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
+  });
+
+  window.hidePaywall = hidePaywall;
+})();
+
 // =====================================================
 // Startup
 // =====================================================
@@ -1620,7 +1660,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   enablePdfDependentControls(false);
   setPageInfo();
 
-  // Paywall modal wiring
+// Paywall modal wiring
 const paywallOverlay = document.getElementById("paywallOverlay");
 const paywallCloseBtn = document.getElementById("paywallCloseBtn");
 const paywallSubscribeBtn = document.getElementById("paywallSubscribeBtn");
@@ -1630,34 +1670,42 @@ const paywallApplyCodeBtn = document.getElementById("paywallApplyCodeBtn");
 const paywallCode = document.getElementById("paywallCode");
 
 function closePaywall() {
-  paywallOverlay?.setAttribute("hidden", "");
+  if (paywallOverlay) paywallOverlay.setAttribute("hidden", "");
 }
 
-paywallCloseBtn?.addEventListener("click", closePaywall);
+if (paywallCloseBtn) paywallCloseBtn.addEventListener("click", closePaywall);
 
-paywallOverlay?.addEventListener("click", (e) => {
-  if (e.target === paywallOverlay) closePaywall(); // click outside closes
-});
+if (paywallOverlay) {
+  paywallOverlay.addEventListener("click", (e) => {
+    if (e.target === paywallOverlay) closePaywall();
+  });
+}
 
-paywallSubscribeBtn?.addEventListener("click", () => {
-  // TODO: Replace with Stripe Payment Link
-  alert("Stripe link goes here.");
-});
+if (paywallUnlockBtn) {
+  paywallUnlockBtn.addEventListener("click", () => {
+    if (paywallUnlockRow) paywallUnlockRow.removeAttribute("hidden");
+    if (paywallCode) paywallCode.focus();
+  });
+}
 
-paywallUnlockBtn?.addEventListener("click", () => {
-  paywallUnlockRow?.removeAttribute("hidden");
-  paywallCode?.focus();
-});
+if (paywallApplyCodeBtn) {
+  paywallApplyCodeBtn.addEventListener("click", () => {
+    const code = ((paywallCode && paywallCode.value) ? paywallCode.value : "").trim();
+    if (code === "PILOT2026") {
+      unlockPilot();
+      closePaywall();
+    } else {
+      alert("Invalid code.");
+    }
+  });
+}
 
-paywallApplyCodeBtn?.addEventListener("click", () => {
-  const code = (paywallCode?.value || "").trim();
-  if (code === "PILOT2026") {
-    unlockPilot();
-    closePaywall();
-  } else {
-    alert("Invalid code.");
-  }
-});
+// subscribe button optional: only wire if you have it
+if (paywallSubscribeBtn) {
+  paywallSubscribeBtn.addEventListener("click", () => {
+    // TODO: open Stripe link
+  });
+}
 
   if ("speechSynthesis" in window) {
     refreshVoices();
