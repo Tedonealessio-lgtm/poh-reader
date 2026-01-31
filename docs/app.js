@@ -1658,6 +1658,25 @@ overlay?.addEventListener("click", (e) => {
   window.hidePaywall = hidePaywall;
 })();
 
+// Inline "Pilot Subscription" blue button on the page
+const inlineSubscribeBtn = document.getElementById("subscribeBtn");
+
+function openSubscribeLink(e) {
+  if (e) e.preventDefault?.();
+  window.location.href = SUBSCRIBE_URL;
+}
+
+inlineSubscribeBtn?.addEventListener("click", openSubscribeLink);
+inlineSubscribeBtn?.addEventListener(
+  "touchend",
+  (e) => {
+    e.preventDefault();
+    openSubscribeLink(e);
+  },
+  { passive: false }
+);
+inlineSubscribeBtn?.addEventListener("pointerup", openSubscribeLink);
+
 // =====================================================
 // Startup
 // =====================================================
