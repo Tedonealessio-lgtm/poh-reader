@@ -516,6 +516,10 @@ body.tts-active .bottomBar{ display:none !important; }
   z-index: 9999;
 }
 
+#paywallOverlay[hidden] {
+  display: none !important;
+}
+
 #paywallModal {
   width: min(520px, 100%);
   max-height: calc(100dvh - 32px);
