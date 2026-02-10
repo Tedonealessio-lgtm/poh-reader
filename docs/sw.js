@@ -1,5 +1,5 @@
 // GitHub Pages-safe Service Worker (scope-aware)
-const CACHE = "poh-reader-cache-v42"; // bump this whenever you deploy changes
+const CACHE = "poh-reader-cache-v43"; // bump this whenever you deploy changes
 
 // Scope base, e.g. "https://.../poh-reader/"  -> BASE = "/poh-reader/"
 const BASE = new URL(self.registration.scope).pathname; // ends with "/"
@@ -8,7 +8,7 @@ const CORE_ASSETS = [
   BASE,                 // ✅ cache the folder URL itself (important for iOS Home Screen launch)
   BASE + "index.html",
   BASE + "style.css",
-  BASE + "app.js",
+  BASE + "app.js?v=43",
   BASE + "pdf.mjs",
   BASE + "pdf.worker.min.mjs",
   BASE + "logo.png",
