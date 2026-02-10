@@ -1,5 +1,5 @@
 // GitHub Pages-safe Service Worker (scope-aware)
-const CACHE = "poh-reader-cache-v40"; // bump this whenever you deploy changes
+const CACHE = "poh-reader-cache-v41"; // bump this whenever you deploy changes
 
 // Scope base, e.g. "https://.../poh-reader/"  -> BASE = "/poh-reader/"
 const BASE = new URL(self.registration.scope).pathname; // ends with "/"
