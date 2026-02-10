@@ -1704,10 +1704,113 @@ inlineSubscribeBtn?.addEventListener(
 );
 inlineSubscribeBtn?.addEventListener("pointerup", openSubscribeLink);
 
+// =====================
+// License persistence
+// =====================
+const LICENSE_DB = "poh_reader";
+const LICENSE_STORE = "kv";
+const LICENSE_KEY = "isUnlocked";
+
+let isUnlocked = false;
+
+function openLicenseDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(LICENSE_DB, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(LICENSE_STORE)) {
+        db.createObjectStore(LICENSE_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function licenseGet(key) {
+  const db = await openLicenseDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(LICENSE_STORE, "readonly");
+    const store = tx.objectStore(LICENSE_STORE);
+    const r = store.get(key);
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+  });
+}
+
+async function licenseSet(key, value) {
+  const db = await openLicenseDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(LICENSE_STORE, "readwrite");
+    const store = tx.objectStore(LICENSE_STORE);
+    const r = store.put(value, key);
+    r.onsuccess = () => resolve(true);
+    r.onerror = () => reject(r.error);
+  });
+}
+
+async function loadLicenseState() {
+  // 1) localStorage fast path
+  const ls = localStorage.getItem(LICENSE_KEY);
+  if (ls === "1") {
+    isUnlocked = true;
+    // Backfill IDB (best-effort)
+    try { await licenseSet(LICENSE_KEY, true); } catch {}
+    return true;
+  }
+
+  // 2) IndexedDB fallback
+  try {
+    const v = await licenseGet(LICENSE_KEY);
+    isUnlocked = (v === true);
+    if (isUnlocked) localStorage.setItem(LICENSE_KEY, "1");
+    return isUnlocked;
+  } catch {
+    isUnlocked = false;
+    return false;
+  }
+}
+
+async function setUnlocked(value) {
+  isUnlocked = !!value;
+
+  if (isUnlocked) localStorage.setItem(LICENSE_KEY, "1");
+  else localStorage.removeItem(LICENSE_KEY);
+
+  try { await licenseSet(LICENSE_KEY, isUnlocked); } catch {}
+
+  updatePaywallUI();
+}
+
+function updatePaywallUI() {
+  // Overlay exists in your HTML
+  const overlay = document.getElementById("paywallOverlay");
+  if (overlay) overlay.hidden = isUnlocked;
+
+  // Gate buttons (only if they exist)
+  const askBtn = document.getElementById("askBtn"); // optional
+  if (askBtn) askBtn.disabled = !isUnlocked;
+
+  // Your mobile bottom "Read page" button is bottomSearch
+  const readBtnMobile = document.getElementById("bottomSearch");
+  if (readBtnMobile) readBtnMobile.disabled = !isUnlocked;
+
+  // If you also have a desktop read button, gate it too (optional)
+  const readBtn = document.getElementById("readBtn");
+  if (readBtn) readBtn.disabled = !isUnlocked;
+}
+
 // =====================================================
 // Startup
 // =====================================================
 window.addEventListener("DOMContentLoaded", async () => {
+  await loadLicenseState();
+  updatePaywallUI();
+
+    window.__unlock = () => setUnlocked(true);
+  window.__lock = () => setUnlocked(false);
+  window.__license = () => ({ isUnlocked, ls: localStorage.getItem(LICENSE_KEY) });
+
   enablePdfDependentControls(false);
   setPageInfo();
 
