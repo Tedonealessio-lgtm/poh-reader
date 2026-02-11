@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>POH Reader</title>
-  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./style.css?v=44" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-v2.png">
 </head>
@@ -141,13 +141,17 @@
     </section>
   </main>
 
-  <!-- MOBILE DOCK -->
+<!-- MOBILE DOCK -->
+<div id="bottomDock" class="dockExpanded">
+  <button id="bottomDockToggle" type="button" aria-label="Toggle bottom dock">▼</button>
+
   <nav class="bottomBar" id="bottomBar" aria-label="Bottom navigation">
     <button id="bottomPrev" class="bottomBtn">◀</button>
     <button id="bottomUpload" class="bottomBtn primary">Upload</button>
     <button id="bottomSearch" class="bottomBtn">Read page</button>
     <button id="bottomNext" class="bottomBtn">▶</button>
   </nav>
+</div>
 
   <!-- Pilot Subscription Paywall Modal -->
 <!-- Paywall -->
@@ -190,12 +194,12 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=43"></script>
+<script type="module" src="./app.js?v=44"></script>
 
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js")
+      navigator.serviceWorker.register("sw.js?v=44")
         .then(reg => {
           console.log("SW registered:", reg.scope);
         })

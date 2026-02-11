@@ -1970,3 +1970,30 @@ if ("serviceWorker" in navigator) {
 }
 
 });
+
+/* ===============================
+   Bottom Dock Collapse / Expand
+================================= */
+(function initBottomDock(){
+  const dock = document.getElementById('bottomDock');
+  const toggle = document.getElementById('bottomDockToggle');
+  if (!dock || !toggle) return;
+
+  // Restore previous state
+  const saved = localStorage.getItem('bottomDockState');
+  if (saved === 'collapsed') dock.classList.add('dockCollapsed');
+
+  function refreshIcon(){
+    toggle.textContent = dock.classList.contains('dockCollapsed') ? '▲' : '▼';
+  }
+  refreshIcon();
+
+  toggle.addEventListener('click', () => {
+    dock.classList.toggle('dockCollapsed');
+    localStorage.setItem(
+      'bottomDockState',
+      dock.classList.contains('dockCollapsed') ? 'collapsed' : 'expanded'
+    );
+    refreshIcon();
+  });
+})();

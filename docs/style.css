@@ -625,3 +625,32 @@ body.tts-active .bottomBar{ display:none !important; }
   overflow: hidden; clip: rect(0,0,0,0);
   white-space: nowrap; border: 0;
 }
+
+/* Collapsible bottom dock */
+#bottomDock{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  transition: transform .22s ease;
+}
+
+#bottomDock.dockCollapsed{
+  transform: translateY(calc(100% - 26px));
+}
+
+#bottomDockToggle{
+  width: 100%;
+  height: 26px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  background: rgba(20,20,20,.92);
+  color: #fff;
+  opacity: .85;
+}
+
+#bottomDockToggle:active{
+  opacity: 1;
+}
