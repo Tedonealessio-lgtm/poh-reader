@@ -1974,27 +1974,28 @@ if ("serviceWorker" in navigator) {
 /* ===============================
    Bottom Dock Collapse / Expand
 ================================= */
-document.addEventListener("DOMContentLoaded", () => {
 
-  const dock = document.getElementById('bottomDock');
-  const toggle = document.getElementById('bottomDockToggle');
-  if (!dock || !toggle) return;
+const dock = document.getElementById("bottomDock");
+const toggle = document.getElementById("bottomDockToggle");
 
-  const saved = localStorage.getItem('bottomDockState');
-  if (saved === 'collapsed') dock.classList.add('dockCollapsed');
+if (dock && toggle) {
 
-  function refreshIcon(){
-    toggle.textContent = dock.classList.contains('dockCollapsed') ? '▲' : '▼';
-  }
+  const saved = localStorage.getItem("bottomDockState");
+  if (saved === "collapsed") dock.classList.add("dockCollapsed");
+
+  const refreshIcon = () => {
+    toggle.textContent = dock.classList.contains("dockCollapsed") ? "▲" : "▼";
+  };
 
   refreshIcon();
 
-  toggle.addEventListener('click', () => {
-    dock.classList.toggle('dockCollapsed');
+  toggle.addEventListener("click", () => {
+    dock.classList.toggle("dockCollapsed");
     localStorage.setItem(
-      'bottomDockState',
-      dock.classList.contains('dockCollapsed') ? 'collapsed' : 'expanded'
+      "bottomDockState",
+      dock.classList.contains("dockCollapsed") ? "collapsed" : "expanded"
     );
     refreshIcon();
   });
-});
+
+}
