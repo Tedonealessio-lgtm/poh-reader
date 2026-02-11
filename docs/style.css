@@ -633,7 +633,8 @@ body.tts-active .bottomBar{ display:none !important; }
   right: 0;
   bottom: 0;
 
-  height: var(--dockH);
+  height: calc(var(--dockH) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
   z-index: 9999;
 
   transition: transform .25s ease;
@@ -646,7 +647,7 @@ body.tts-active .bottomBar{ display:none !important; }
 
 /* collapsed */
 #bottomDock.dockCollapsed{
-  transform: translateY(calc(100% - 26px));
+  transform: translateY(calc(100% - 26px - env(safe-area-inset-bottom)));
 }
 
 
