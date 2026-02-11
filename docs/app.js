@@ -1979,6 +1979,11 @@ const dock = document.getElementById("bottomDock");
 const toggle = document.getElementById("bottomDockToggle");
 
 if (dock && toggle) {
+  const applyDockHeight = () => {
+    const collapsed = dock.classList.contains("dockCollapsed");
+    // MUST match your CSS usage: body padding uses --dockH
+    document.documentElement.style.setProperty("--dockH", collapsed ? "26px" : "96px");
+  };
 
   const saved = localStorage.getItem("bottomDockState");
   if (saved === "collapsed") dock.classList.add("dockCollapsed");
@@ -1987,7 +1992,9 @@ if (dock && toggle) {
     toggle.textContent = dock.classList.contains("dockCollapsed") ? "▲" : "▼";
   };
 
+  // ensure correct state on load
   refreshIcon();
+  applyDockHeight();
 
   toggle.addEventListener("click", () => {
     dock.classList.toggle("dockCollapsed");
@@ -1996,6 +2003,6 @@ if (dock && toggle) {
       dock.classList.contains("dockCollapsed") ? "collapsed" : "expanded"
     );
     refreshIcon();
+    applyDockHeight();
   });
-
 }
