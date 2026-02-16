@@ -90,15 +90,14 @@ html[data-theme="dark"] {
 
 :root{
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  --dockPadH: 96px;
-  --dockBarH: 96px;
+  --dockH: 96px;
 }
 
 body{
   margin:0;
   background: var(--bg);
   color: var(--text);
-  padding-bottom: calc(var(--dockPadH) + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--dockH) + env(safe-area-inset-bottom));
 }
 
 .hiddenFile{
@@ -352,38 +351,105 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
 .subText{ margin-top:10px; opacity:.85; }
 
 /* ===== MOBILE DOCK ===== */
-.bottomBar{ display:none; }
 
-@media (max-width: 768px){
-  .brand .appLogo{
-    width: 80px;
-    height: 80px;
-    object-fit: contain;
-    border-radius: 12px;
-    flex: 0 0 auto;
-  }
+/* Hide dock by default (desktop/tablet) */
+#bottomDock,
+#dockBackdrop{
+  display: none;
 }
+
+/* Mobile-only dock */
+@media (max-width: 768px){
+
+  /* show dock on mobile */
+  #bottomDock,
+  #dockBackdrop{
+    display: block;
+  }
 
   /* allow normal scrolling on mobile */
   .panelRight{ max-height:none; overflow:visible; }
   .panelLeft{ max-height:none; overflow:visible; }
 
-.bottomBar{
-  display:flex;
-  margin: 12px;
-  gap:10px;
+  /* Collapsible bottom dock container */
+  #bottomDock{
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
 
-  padding:12px;
-  border-radius:22px;
-  border:1px solid var(--border);
-  background: var(--panel);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 14px 40px rgba(0,0,0,0.25);
+    /* this must match the JS variable logic */
+    height: calc(var(--dockH) + env(safe-area-inset-bottom));
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 9999;
 
-  height: var(--dockBarH);
-  align-items:center;
-}
+    transition: transform .25s ease;
+    box-shadow: 0 -10px 30px rgba(0,0,0,.25);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    overflow: hidden;
+
+    /* make the dock itself have a background so it doesn’t look “broken” */
+    background: transparent;
+  }
+
+  /* Backdrop (tap outside to close) */
+  #dockBackdrop{
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.28);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease;
+    z-index: 9998; /* below #bottomDock */
+  }
+
+  body.dockExpanded #dockBackdrop{
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Toggle handle */
+  #bottomDockToggle{
+    width: 100%;
+    height: 26px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    background: rgba(20,20,20,.92);
+    color: #fff;
+    opacity: .85;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 2px;
+
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  #bottomDockToggle:active{ opacity: 1; }
+
+  /* The bar INSIDE the dock (NOT fixed anymore) */
+  .bottomBar{
+    display:flex;
+    gap:10px;
+
+    padding:12px;
+    border-radius:22px;
+    border:1px solid var(--border);
+    background: var(--panel);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.25);
+
+    height: var(--dockH);
+    align-items:center;
+
+    /* sit nicely inside the dock */
+    margin: 0 12px 12px;
+  }
 
   .bottomBtn{
     flex:1;
@@ -394,303 +460,22 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
     background: rgba(255,255,255,0.06);
     border:1px solid rgba(255,255,255,0.10);
   }
+
   .bottomBtn.primary{ flex:1.25; }
 
-/* Hide dock while TTS “block” is focused/active (optional) */
-body.tts-active .bottomBar{ display:none !important; }
+  /* collapsed state */
+  #bottomDock.dockCollapsed{
+    transform: translateY(calc(100% - 26px - env(safe-area-inset-bottom)));
+  }
 
-@media (prefers-reduced-motion: reduce){
-  *{ scroll-behavior:auto; }
-}
+  #bottomDock.dockCollapsed .bottomBar{
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(20px);
+  }
 
-/* --- Best Places spacing + nicer tap targets --- */
-#bestPlacesWrap {
-  margin-top: 12px;
-}
-
-#bestPlaces {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;            /* space between cards */
-}
-
-.bestPlaceCard {
-  padding: 14px 14px;
-  border-radius: 14px;
-}
-
-.bestPlaceTitle {
-  margin-bottom: 8px;
-}
-
-.bestPlaceActions {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.bestPlaceBtn {
-  padding: 10px 12px;
-  border-radius: 12px;
-  min-height: 40px;     /* bigger tap area */
-}
-
-/* ================================
-   Pilot Subscription – Paywall
-   ================================ */
-
-.overlay[hidden] {
-  display: none !important;
-}
-
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-  z-index: 9999;
-}
-
-.modalCard {
-  width: min(520px, 100%);
-  background: var(--panelSolid);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: var(--shadow);
-  padding: 14px 14px 16px;
-}
-
-.modalHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.modalTitle {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.modalBody {
-  color: var(--text);
-}
-
-.modalList {
-  margin: 10px 0 0;
-  padding-left: 18px;
-  opacity: 0.95;
-}
-
-.textInput {
-  flex: 1;
-  min-width: 180px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--card);
-  color: var(--text);
-  outline: none;
-}
-
-.textInput:focus {
-  border-color: var(--accent);
-}
-
-/* ===== Paywall modal ===== */
-#paywallOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  z-index: 9999;
-}
-
-#paywallOverlay[hidden] {
-  display: none !important;
-}
-
-#paywallModal {
-  width: min(520px, 100%);
-  max-height: calc(100dvh - 32px);
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-
-  background: #fff;
-  border-radius: 16px;
-  padding: 18px 16px;
-  padding-bottom: calc(18px + env(safe-area-inset-bottom));
-  box-shadow: 0 18px 60px rgba(0,0,0,.25);
-  position: relative;
-  z-index: 10000;
-}
-
-.paywallClose {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,.12);
-  background: #fff;
-  font-size: 22px;
-  line-height: 1;
-
-  z-index: 10001;
-  pointer-events: auto;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-.paywallMsg { margin: 10px 0 12px; color: rgba(0,0,0,.78); }
-.paywallList { margin: 0 0 14px 18px; color: rgba(0,0,0,.85); }
-
-.paywallActions {
-  display: grid;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.btnPrimary, .btnSecondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 44px;
-  padding: 0 14px;
-  border-radius: 12px;
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.btnPrimary { background: #111; color: #fff; }
-
-.btnSecondary {
-  background: #f2f2f2;
-  color: #111;
-  border: 1px solid rgba(0,0,0,.12);
-}
-
-.btnLink {
-  background: transparent;
-  border: none;
-  padding: 6px 0;
-  text-align: center;
-  color: rgba(0,0,0,.70);
-  text-decoration: underline;
-}
-
-.unlockRow {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-#paywallCode {
-  height: 44px;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,.18);
-  padding: 0 12px;
-  font-size: 16px; /* prevents iOS zoom */
-}
-
-.unlockHint {
-  grid-column: 1 / -1;
-  font-size: 13px;
-  color: rgba(0,0,0,.60);
-}
-
-.paywallFooter {
-  margin-top: 12px;
-  font-size: 13px;
-  color: rgba(0,0,0,.60);
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px; height: 1px;
-  padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0,0,0,0);
-  white-space: nowrap; border: 0;
-}
-
-/* Collapsible bottom dock */
-#bottomDock{
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-
-  height: calc(var(--dockH) + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 9999;
-
-  transition: transform .25s ease;
-
-  box-shadow: 0 -10px 30px rgba(0,0,0,.25);
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-  overflow: hidden;
-}
-
-/* ================================
-   Dock Backdrop (tap outside to close)
-   ================================ */
-
-#dockBackdrop{
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.28);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .18s ease;
-  z-index: 9998; /* below #bottomDock (9999) */
-}
-
-/* Show backdrop only when dock expanded */
-body.dockExpanded #dockBackdrop{
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* collapsed */
-#bottomDock.dockCollapsed{
-  transform: translateY(calc(100% - 26px - env(safe-area-inset-bottom)));
-}
-
-#bottomDock.dockCollapsed .bottomBar{
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(20px);
-}
-
-
-#bottomDockToggle{
-  width: 100%;
-  height: 26px;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  background: rgba(20,20,20,.92);
-  color: #fff;
-  opacity: .85;
-
-    display: flex;
-  align-items: center;
-  justify-content: center;
-  letter-spacing: 2px;
-}
-
-#bottomDockToggle:active{
-  opacity: 1;
+  /* Optional: hide dock while TTS is active */
+  body.tts-active #bottomDock{
+    display:none !important;
+  }
 }
