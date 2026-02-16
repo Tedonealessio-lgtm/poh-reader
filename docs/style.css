@@ -367,13 +367,9 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   .panelRight{ max-height:none; overflow:visible; }
   .panelLeft{ max-height:none; overflow:visible; }
 
- .bottomBar{
+.bottomBar{
   display:flex;
-  position:fixed;
-  left:12px;
-  right:12px;
-  bottom: calc(14px + env(safe-area-inset-bottom));
-  z-index:9999;
+  margin: 12px;
   gap:10px;
 
   padding:12px;
@@ -383,6 +379,7 @@ button:disabled{ opacity:.45; cursor:not-allowed; }
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 14px 40px rgba(0,0,0,0.25);
+
   height: var(--dockH);
   align-items:center;
 }
@@ -643,6 +640,26 @@ body.tts-active .bottomBar{ display:none !important; }
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
   overflow: hidden;
+}
+
+/* ================================
+   Dock Backdrop (tap outside to close)
+   ================================ */
+
+#dockBackdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.28);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+  z-index: 9998; /* below #bottomDock (9999) */
+}
+
+/* Show backdrop only when dock expanded */
+body.dockExpanded #dockBackdrop{
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* collapsed */

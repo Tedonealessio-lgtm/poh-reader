@@ -1709,7 +1709,7 @@ inlineSubscribeBtn?.addEventListener("pointerup", openSubscribeLink);
 // =====================
 const LICENSE_DB = "poh_reader";
 const LICENSE_STORE = "kv";
-const LICENSE_KEY = "isUnlocked";
+const LICENSE_KEY = "pohPilotPaid";
 
 let isUnlocked = false;
 
