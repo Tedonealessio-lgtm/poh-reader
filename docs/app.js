@@ -1965,36 +1965,55 @@ if ("serviceWorker" in navigator) {
 
 /* ===============================
    Bottom Dock Collapse / Expand
+   + Backdrop tap-to-close
 ================================= */
 
 const dock = document.getElementById("bottomDock");
 const toggle = document.getElementById("bottomDockToggle");
+const backdrop = document.getElementById("dockBackdrop");
 
 if (dock && toggle) {
-  const applyDockHeight = () => {
-    const collapsed = dock.classList.contains("dockCollapsed");
-    // MUST match your CSS usage: body padding uses --dockH
-    document.documentElement.style.setProperty("--dockH", collapsed ? "26px" : "96px");
-  };
+  const isCollapsed = () => dock.classList.contains("dockCollapsed");
 
-  const saved = localStorage.getItem("bottomDockState");
-  if (saved === "collapsed") dock.classList.add("dockCollapsed");
+  const applyDockHeight = () => {
+    // MUST match your CSS: body padding uses --dockH
+    document.documentElement.style.setProperty("--dockH", isCollapsed() ? "26px" : "96px");
+  };
 
   const refreshIcon = () => {
-    toggle.textContent = dock.classList.contains("dockCollapsed") ? "▲" : "▼";
+    toggle.textContent = isCollapsed() ? "▲" : "▼";
   };
 
-  // ensure correct state on load
-  refreshIcon();
-  applyDockHeight();
+  const setExpandedState = (expanded) => {
+    dock.classList.toggle("dockCollapsed", !expanded);
+    document.body.classList.toggle("dockExpanded", expanded);
 
-  toggle.addEventListener("click", () => {
-    dock.classList.toggle("dockCollapsed");
-    localStorage.setItem(
-      "bottomDockState",
-      dock.classList.contains("dockCollapsed") ? "collapsed" : "expanded"
-    );
+    localStorage.setItem("bottomDockState", expanded ? "expanded" : "collapsed");
+
     refreshIcon();
     applyDockHeight();
+  };
+
+  // Restore saved state
+  const saved = localStorage.getItem("bottomDockState");
+  setExpandedState(saved !== "collapsed"); // default expanded unless user collapsed
+
+  // Toggle button
+  toggle.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedState(isCollapsed()); // if collapsed -> expand, if expanded -> collapse
+  });
+
+  // Backdrop click collapses dock
+  if (backdrop) {
+    backdrop.addEventListener("click", () => {
+      setExpandedState(false);
+    });
+  }
+
+  // Optional: ESC key collapses (nice on desktop)
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") setExpandedState(false);
   });
 }
