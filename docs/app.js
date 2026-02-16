@@ -1843,34 +1843,26 @@ if (paywallUnlockBtn) {
 }
 
 if (paywallApplyCodeBtn) {
-  paywallApplyCodeBtn.addEventListener("click", (e) => {
+  paywallApplyCodeBtn.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
     const raw = (paywallCode?.value || "").trim();
     const code = raw.toUpperCase();
 
-    // ✅ accept your current manual code
     if (code !== "POH-PILOT-001") {
       alert("Invalid code. Please paste the code you received after subscribing.");
       return;
     }
 
-    // ✅ persist paid state (THIS is what makes it stick)
-    localStorage.setItem(PAID_KEY, "1");
+    // ✅ Persist license properly
+    await setUnlocked(true);
 
-    // ✅ close modal
-    closePaywall?.();              // if you have closePaywall()
-    // OR if your function is named hidePaywall():
-    // hidePaywall?.();
+    // ✅ Close modal
+    closePaywall();
 
-    // ✅ enable paid controls immediately
-    enablePdfDependentControls(true);
-
-    // tiny iOS safety (prevents “needs 2 taps”)
-    setTimeout(() => {
-      paywallOverlay?.setAttribute("hidden", "");
-    }, 0);
+    // ✅ Clear input
+    if (paywallCode) paywallCode.value = "";
   });
 }
 
