@@ -1,76 +1,78 @@
-// GitHub Pages-safe Service Worker (scope-aware)
-const CACHE = "poh-reader-cache-v54"; // bump this whenever you deploy changes
-
-// Scope base, e.g. "https://.../poh-reader/"  -> BASE = "/poh-reader/"
+// GitHub Pages-safe Service Worker (scope-aware) — OFFLINE-FIRST
+const CACHE = "poh-reader-cache-v55"; // bump on deploy
 const BASE = new URL(self.registration.scope).pathname; // ends with "/"
 
 const CORE_ASSETS = [
-  BASE,                 // ✅ cache the folder URL itself (important for iOS Home Screen launch)
+  BASE,
   BASE + "index.html",
   BASE + "style.css",
-  BASE + "app.js?v=43",
+  BASE + "app.js",              // ✅ prefer no query here
   BASE + "pdf.mjs",
   BASE + "pdf.worker.min.mjs",
   BASE + "logo.png",
   BASE + "apple-touch-icon.png",
   BASE + "apple-touch-icon-v2.png",
-  // If you have it:
   // BASE + "manifest.webmanifest",
 ];
 
-// INSTALL
 self.addEventListener("install", (event) => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(CORE_ASSETS))
-  );
-  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE_ASSETS)));
 });
 
-// ACTIVATE
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((k) => (k !== CACHE ? caches.delete(k) : null)));
-      await self.clients.claim();
-    })()
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => (k !== CACHE ? caches.delete(k) : null)));
+    await self.clients.claim();
+  })());
 });
 
-// FETCH
+// Helper: update cache in background
+async function refreshCache(req) {
+  try {
+    const res = await fetch(req);
+    const cache = await caches.open(CACHE);
+    await cache.put(req, res.clone());
+    return res;
+  } catch {
+    return null;
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
 
-  // ✅ Always serve app shell for navigations (critical for iOS offline launch)
+  // ✅ NAVIGATIONS: cache-first, update in background
   if (req.mode === "navigate") {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE);
 
-      // Try network first when online (so updates work)
-      try {
-        const net = await fetch(req);
-        // Refresh cached index.html for future offline boots
-        cache.put(BASE + "index.html", net.clone());
-        return net;
-      } catch (e) {
-        // Offline: serve cached shell
-        const cachedIndex = await cache.match(BASE + "index.html");
-        if (cachedIndex) return cachedIndex;
+      // Always boot instantly from cache
+      const cached =
+        (await cache.match(BASE + "index.html", { ignoreSearch: true })) ||
+        (await cache.match(BASE, { ignoreSearch: true }));
 
-        // Extra fallback: base path
-        const cachedBase = await cache.match(BASE);
-        if (cachedBase) return cachedBase;
+      // Kick off background update (don’t block UI)
+      event.waitUntil(refreshCache(req));
 
-        return new Response("Offline: app shell not cached", { status: 503 });
-      }
+      return cached || fetch(req); // final fallback
     })());
     return;
   }
 
-  // Cache-first for static assets (works offline)
-  event.respondWith(
-    caches.match(req).then((cached) => cached || fetch(req))
-  );
+  // ✅ STATIC: cache-first (ignore query strings), update in background
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    const cached = await cache.match(req, { ignoreSearch: true });
+    if (cached) {
+      event.waitUntil(refreshCache(req));
+      return cached;
+    }
+    // Not cached yet: try network, then cache it
+    const res = await fetch(req);
+    cache.put(req, res.clone());
+    return res;
+  })());
 });
