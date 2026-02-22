@@ -1765,8 +1765,9 @@ async function setUnlocked(value) {
 
 function updatePaywallUI() {
   // Overlay exists in your HTML
-  const overlay = document.getElementById("paywallOverlay");
-  if (overlay) overlay.hidden = isUnlocked;
+const overlay = document.getElementById("paywallOverlay");
+if (overlay && isUnlocked) overlay.hidden = true;   // only force-hide when unlocked
+// if NOT unlocked → do nothing (keep it hidden unless user triggers it)
 
   // Gate buttons (only if they exist)
   const askBtn = document.getElementById("askBtn"); // optional
@@ -1787,6 +1788,8 @@ function updatePaywallUI() {
 window.addEventListener("DOMContentLoaded", async () => {
   await loadLicenseState();
   updatePaywallUI();
+
+  document.getElementById("paywallOverlay")?.setAttribute("hidden", "");
 
     window.__unlock = () => setUnlocked(true);
   window.__lock = () => setUnlocked(false);

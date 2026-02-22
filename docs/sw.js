@@ -1,5 +1,5 @@
 // GitHub Pages-safe Service Worker (scope-aware) — OFFLINE-FIRST
-const CACHE = "poh-reader-cache-v6"; // bump on deploy
+const CACHE = "poh-reader-cache-v7"; // bump on deploy
 const BASE = new URL(self.registration.scope).pathname; // ends with "/"
 
 const CORE_ASSETS = [
