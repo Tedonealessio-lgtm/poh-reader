@@ -178,12 +178,48 @@
   </div>
 </div>
 
+<!-- Welcome / Explanation Overlay -->
+<div id="welcomeOverlay" hidden>
+  <div id="welcomeModal" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+    <button id="welcomeClose" class="welcomeClose" aria-label="Close">×</button>
+
+    <div class="welcomeBrand">
+      <img src="./logo.png" alt="POH Reader" class="welcomeLogo" />
+      <div class="welcomeAppName">POH Reader</div>
+    </div>
+
+    <div class="welcomeCard">
+      <div class="welcomeLabel" id="welcomeTitle">Important notice</div>
+
+      <p class="welcomeLead">
+        POH Reader is a decision-support and study tool only. It does not replace the official POH/AFM or approved flight documentation.
+        The pilot in command remains solely responsible for aircraft operation and compliance.
+      </p>
+
+      <ul class="welcomeList">
+        <li><b>Manuals stay on your device</b> — no upload required.</li>
+        <li><b>Search</b> is precise keyword search.</li>
+        <li><b>Ask</b> shows “best places to look” inside your manual (offline scan).</li>
+        <li><b>Read aloud</b> reads page/section with Resume.</li>
+      </ul>
+
+      <div class="welcomeSafety">
+        Safety: Always verify in the official POH/AFM.
+      </div>
+    </div>
+
+    <div class="welcomeActions">
+      <button id="welcomeContinueBtn" class="btnPrimary" type="button">Continue</button>
+    </div>
+  </div>
+</div>
+
 <script type="module" src="./app.js"></script>
 
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js?v=6")
+      navigator.serviceWorker.register("sw.js?v=51")
         .then(reg => {
           console.log("SW registered:", reg.scope);
         })

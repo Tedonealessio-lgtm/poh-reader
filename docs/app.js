@@ -1789,6 +1789,44 @@ window.addEventListener("DOMContentLoaded", async () => {
   await loadLicenseState();
   updatePaywallUI();
 
+  // ================================
+// Welcome overlay (first run)
+// ================================
+const WELCOME_KEY = "pohWelcomeSeen";
+
+function showWelcome() {
+  document.getElementById("welcomeOverlay")?.removeAttribute("hidden");
+}
+
+function hideWelcome() {
+  document.getElementById("welcomeOverlay")?.setAttribute("hidden", "");
+  localStorage.setItem(WELCOME_KEY, "1");
+}
+
+(function initWelcomeUI() {
+  const overlay = document.getElementById("welcomeOverlay");
+  const closeBtn = document.getElementById("welcomeClose");
+  const continueBtn = document.getElementById("welcomeContinueBtn");
+  const modal = document.getElementById("welcomeModal");
+
+  // show on first run only
+  if (localStorage.getItem(WELCOME_KEY) !== "1") {
+    showWelcome();
+
+    // Optional: logo-first splash for 700ms, then show card/actions
+    modal?.classList.add("splashOnly");
+    setTimeout(() => modal?.classList.remove("splashOnly"), 700);
+  }
+
+  closeBtn?.addEventListener("click", hideWelcome);
+  continueBtn?.addEventListener("click", hideWelcome);
+
+  // Tap outside closes
+  overlay?.addEventListener("click", (e) => {
+    if (e.target === overlay) hideWelcome();
+  });
+})();
+
   document.getElementById("paywallOverlay")?.setAttribute("hidden", "");
 
     window.__unlock = () => setUnlocked(true);
