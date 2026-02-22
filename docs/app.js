@@ -1685,25 +1685,6 @@ overlay?.addEventListener("click", (e) => {
   window.hidePaywall = hidePaywall;
 })();
 
-// Inline "Pilot Subscription" blue button on the page
-const inlineSubscribeBtn = document.getElementById("subscribeBtn");
-
-function openSubscribeLink(e) {
-  if (e) e.preventDefault?.();
-  window.location.href = SUBSCRIBE_URL;
-}
-
-inlineSubscribeBtn?.addEventListener("click", openSubscribeLink);
-inlineSubscribeBtn?.addEventListener(
-  "touchend",
-  (e) => {
-    e.preventDefault();
-    openSubscribeLink(e);
-  },
-  { passive: false }
-);
-inlineSubscribeBtn?.addEventListener("pointerup", openSubscribeLink);
-
 // =====================
 // License persistence
 // =====================
@@ -1813,58 +1794,6 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   enablePdfDependentControls(false);
   setPageInfo();
-
-// Paywall modal wiring
-const paywallOverlay = document.getElementById("paywallOverlay");
-const paywallCloseBtn = document.getElementById("paywallCloseBtn");
-const paywallSubscribeBtn = document.getElementById("paywallSubscribeBtn");
-const paywallUnlockBtn = document.getElementById("paywallUnlockBtn");
-const paywallUnlockRow = document.getElementById("paywallUnlockRow");
-const paywallApplyCodeBtn = document.getElementById("paywallApplyCodeBtn");
-const paywallCode = document.getElementById("paywallCode");
-
-function closePaywall() {
-  if (paywallOverlay) paywallOverlay.setAttribute("hidden", "");
-}
-
-if (paywallCloseBtn) paywallCloseBtn.addEventListener("click", closePaywall);
-
-if (paywallOverlay) {
-  paywallOverlay.addEventListener("click", (e) => {
-    if (e.target === paywallOverlay) closePaywall();
-  });
-}
-
-if (paywallUnlockBtn) {
-  paywallUnlockBtn.addEventListener("click", () => {
-    if (paywallUnlockRow) paywallUnlockRow.removeAttribute("hidden");
-    if (paywallCode) paywallCode.focus();
-  });
-}
-
-if (paywallApplyCodeBtn) {
-  paywallApplyCodeBtn.addEventListener("click", async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const raw = (paywallCode?.value || "").trim();
-    const code = raw.toUpperCase();
-
-    if (code !== "POH-PILOT-001") {
-      alert("Invalid code. Please paste the code you received after subscribing.");
-      return;
-    }
-
-    // ✅ Persist license properly
-    await setUnlocked(true);
-
-    // ✅ Close modal
-    closePaywall();
-
-    // ✅ Clear input
-    if (paywallCode) paywallCode.value = "";
-  });
-}
 
   if ("speechSynthesis" in window) {
     refreshVoices();
