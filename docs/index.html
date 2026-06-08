@@ -10,35 +10,30 @@
 </head>
 
 <body>
-  <!-- hidden real file input -->
-  <input id="file" class="hiddenFile" type="file" accept="application/pdf" />
 
+  <!-- Hidden file input -->
+  <input id="file" type="file" accept="application/pdf" style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;" />
+
+  <!-- TOP BAR -->
   <header class="topbar">
-  <div class="brand">
-    <img src="./logo.png" alt="POH Reader logo" class="appLogo" />
-    <div class="brandText">
-      <div class="brandTitle">POH Reader</div>
-      <div class="brandSub">Offline POH / OM reader • Search • Listen</div>
+    <div class="brand">
+      <img src="./logo.png" alt="POH Reader logo" class="appLogo" />
+      <div class="brandText">
+        <div class="brandTitle">POH Reader</div>
+        <div class="brandSub">Offline POH / OM reader • Search • Listen</div>
+      </div>
     </div>
-  </div>
+    <div class="row topActions">
+      <button id="themeToggle" class="iconBtn" type="button" title="Toggle light / dark" aria-label="Toggle theme">🌙</button>
+      <button id="uploadBtn" class="uploadBtn">+ Upload POH / OM</button>
+      <div id="pageInfo" class="pageInfo">Page: – / –</div>
+    </div>
+  </header>
 
-  <div class="row topActions">
-   <button
-  id="themeToggle"
-  class="iconBtn"
-  type="button"
-  title="Toggle light / dark"
-  aria-label="Toggle theme">
-  🌙
-</button>
-
-    <button id="uploadBtn" class="uploadBtn">+ Upload POH / OM</button>
-    <div id="pageInfo" class="pageInfo">Page: – / –</div>
-  </div>
-</header>
-
+  <!-- MAIN (desktop: 3 columns | mobile: viewer only, panels hidden) -->
   <main>
-    <!-- LEFT -->
+
+    <!-- LEFT panel (desktop only — hidden on mobile via CSS) -->
     <section class="panel panelLeft">
       <h2>Library</h2>
       <select id="librarySelect"></select>
@@ -48,20 +43,15 @@
         <button id="clearLibraryBtn">Clear</button>
       </div>
       <div id="libraryStatus" class="sectionMeta"></div>
-
       <div class="row" style="margin-top:10px;">
         <button id="feedbackBtn" style="width:100%;">Copy Feedback</button>
       </div>
-
       <hr />
-
       <h2>Sections</h2>
       <div class="sectionHint">Jump to a section instantly.</div>
       <input id="sectionFilter" type="text" placeholder="Filter sections..." />
       <div id="sectionsList" class="sectionsList"></div>
-
       <hr />
-
       <h2>Search within POH</h2>
       <div class="sectionHint">Exact text search (best for numbers/limits).</div>
       <input id="searchInput" type="text" placeholder="Search text…" />
@@ -71,36 +61,29 @@
       <div id="searchResults" class="results"></div>
     </section>
 
-    <!-- CENTER VIEWER -->
+    <!-- CENTER viewer -->
     <section class="viewer">
       <canvas id="canvas"></canvas>
     </section>
 
-    <!-- RIGHT -->
+    <!-- RIGHT panel (desktop only — hidden on mobile via CSS) -->
     <section class="panel panelRight">
       <h2>Ask &amp; Listen</h2>
       <div class="sectionHint">
-        Offline guidance: I’ll point you to relevant pages.
+        Offline guidance: I'll point you to relevant pages.
         <div class="sectionMeta">Decision-support only.</div>
       </div>
-
       <textarea id="question" rows="2" placeholder="Ask a question (local mode)…"></textarea>
       <button id="askBtn">Ask</button>
-
-      <!-- IMPORTANT: this is where the “jump cards” render -->
       <div class="row" style="margin-top:10px;">
         <button id="micBtn">🎤 Hold to talk</button>
       </div>
       <div id="micStatus" class="sectionMeta"></div>
-
       <div class="safetyLine">Always verify in the official POH/AFM.</div>
-
-       <div id="bestPlacesWrap" class="bestPlacesWrap" style="display:none;">
+      <div id="bestPlacesWrap" class="bestPlacesWrap" style="display:none;">
         <div id="bestPlaces"></div>
       </div>
-
       <div id="answer" class="answer"></div>
-
       <div id="ttsControls" class="ttsControls">
         <div class="row">
           <button id="readPageBtn">Read page</button>
@@ -108,127 +91,228 @@
           <button id="stopReadBtn">Stop</button>
           <button id="resumeReadBtn" disabled>Resume</button>
         </div>
-
         <div class="row" style="margin-top:8px;">
           <label style="flex:1;">Voice
             <select id="voiceSelect"></select>
           </label>
         </div>
-
         <div class="row" style="margin-top:8px;align-items:center;">
           <div style="min-width:60px;opacity:.85;">Speed</div>
           <input id="speedRange" type="range" min="0.7" max="1.3" step="0.05" value="1.0" style="width:100%;">
         </div>
       </div>
     </section>
+
   </main>
 
-<!-- MOBILE DOCK -->
-<div id="dockBackdrop" aria-hidden="true"></div>
+  <!-- ============================================================
+       MOBILE ONLY ELEMENTS (hidden on desktop via CSS)
+       ============================================================ -->
 
-<div id="bottomDock">
-  <button id="bottomDockToggle" type="button" aria-label="Toggle bottom dock">▼</button>
+  <!-- Sheet backdrop -->
+  <div id="sheetBackdrop"></div>
 
-  <nav class="bottomBar" id="bottomBar" aria-label="Bottom navigation">
-    <button id="bottomPrev" class="bottomBtn">◀</button>
-    <button id="bottomUpload" class="bottomBtn primary">Upload</button>
-    <button id="bottomSearch" class="bottomBtn">Read page</button>
-    <button id="bottomNext" class="bottomBtn">▶</button>
-  </nav>
-</div>
+  <!-- Floating action bar -->
+  <div id="mobileActionBar">
+    <button class="mabBtn" id="mabPrev" title="Previous page">◀</button>
+    <button class="mabBtn" id="mabNext" title="Next page">▶</button>
+    <div class="mabDivider"></div>
+  <button class="mabUpload mabBtn" id="mabUpload">+ Upload</button>
+    <div class="mabDivider"></div>
+    <button class="mabBtn" id="mabLibrary" title="Library">📚</button>
+    <button class="mabBtn" id="mabSearch" title="Search">🔍</button>
+    <button class="mabBtn" id="mabAsk" title="Ask & Listen">🎧</button>
+  </div>
 
-  <!-- Pilot Subscription Paywall Modal -->
-<!-- Paywall -->
-<div id="paywallOverlay" hidden>
-  <div id="paywallModal" role="dialog" aria-modal="true" aria-labelledby="paywallTitle">
-    <button id="paywallClose" class="paywallClose" aria-label="Close">×</button>
+  <!-- TTS Mini Bar -->
+  <div id="ttsMiniBar">
+    <span style="font-size:16px;">🎧</span>
+    <span class="ttsBarLabel" id="ttsBarLabel">Reading…</span>
+    <button class="ttsBarBtn" id="ttsBarStop" title="Stop">⏹</button>
+    <button class="ttsBarBtn ttsBarBtnPrimary" id="ttsBarResume" title="Resume">▶</button>
+  </div>
 
-    <h3 id="paywallTitle">Pilot Subscription</h3>
-
-    <p id="paywallMsg" class="paywallMsg">
-      Unlock this feature with Pilot Subscription (7,99 €).
-    </p>
-
-    <ul class="paywallList">
-      <li><b>Ask</b> — guidance + “Best places to look”</li>
-      <li><b>Read aloud</b> — page/section audio with Resume</li>
-    </ul>
-
-    <div class="paywallActions">
-      <a id="paywallSubscribeBtn" class="btnPrimary" href="#" target="_blank" rel="noopener">
-        Subscribe — 7,99 €
-      </a>
-
-      <button id="paywallAlreadyBtn" class="btnLink" type="button">
-        I already subscribed
-      </button>
+  <!-- LIBRARY SHEET -->
+  <div class="bottomSheet" id="librarySheet">
+    <div class="sheetHandle"></div>
+    <div class="sheetHeader">
+      <span class="sheetTitle">📚 Library &amp; Sections</span>
+      <button class="sheetClose" id="librarySheetClose">✕</button>
     </div>
+    <div class="sheetContent">
+      <h2>Library</h2>
+      <p class="sectionHint">Your saved POH/AFM manuals.</p>
+      <button onclick="document.getElementById('file').click()" style="width:100%;margin-bottom:10px;font-weight:700;">+ Upload new PDF</button>
+      <p class="sectionHint" id="librarySheetStatus"></p>
 
-    <div id="paywallUnlockRow" class="unlockRow" hidden>
-      <label class="srOnly" for="paywallCode">Unlock code</label>
-      <input id="paywallCode" type="text" inputmode="text" autocomplete="one-time-code"
-             placeholder="Enter unlock code" />
-      <button id="paywallUnlockBtn" class="btnSecondary" type="button">Unlock</button>
-      <div id="paywallUnlockHint" class="unlockHint">Tip: paste the code you received after subscribing.</div>
-    </div>
+      <hr style="margin:14px 0;" />
 
-    <div class="paywallFooter">
-      Manuals stay on your device. No upload required.
+      <h2>Sections</h2>
+      <div class="sectionHint">Tap a section to jump there instantly.</div>
+      <input type="text" id="sectionFilterSheet" placeholder="Filter sections..." style="margin-bottom:8px;" />
+      <div id="sectionsListSheet" class="sectionsList"></div>
     </div>
   </div>
-</div>
 
-<!-- Welcome / Explanation Overlay -->
-<div id="welcomeOverlay" hidden>
-  <div id="welcomeModal" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
-    <button id="welcomeClose" class="welcomeClose" aria-label="Close">×</button>
-
-    <div class="welcomeBrand">
-      <img src="./logo.png" alt="POH Reader" class="welcomeLogo" />
-      <div class="welcomeAppName">POH Reader</div>
+  <!-- SEARCH SHEET -->
+  <div class="bottomSheet" id="searchSheet">
+    <div class="sheetHandle"></div>
+    <div class="sheetHeader">
+      <span class="sheetTitle">🔍 Search</span>
+      <button class="sheetClose" id="searchSheetClose">✕</button>
     </div>
+    <div class="sheetContent">
+      <div class="sectionHint">Exact text search — best for numbers and limits.</div>
+      <input type="text" id="searchInputSheet" placeholder="Search text…" />
+      <button id="searchBtnSheet" style="width:100%;margin-top:8px;">Search</button>
+      <div id="searchResultsSheet" class="results"></div>
+    </div>
+  </div>
 
-    <div class="welcomeCard">
-      <div class="welcomeLabel" id="welcomeTitle">Important notice</div>
-
-      <p class="welcomeLead">
-        POH Reader is a decision-support and study tool only. It does not replace the official POH/AFM or approved flight documentation.
-        The pilot in command remains solely responsible for aircraft operation and compliance.
-      </p>
-
-      <ul class="welcomeList">
-        <li><b>Manuals stay on your device</b> — no upload required.</li>
-        <li><b>Search</b> is precise keyword search.</li>
-        <li><b>Ask</b> shows “best places to look” inside your manual (offline scan).</li>
-        <li><b>Read aloud</b> reads page/section with Resume.</li>
-      </ul>
-
-      <div class="welcomeSafety">
-        Safety: Always verify in the official POH/AFM.
+  <!-- ASK & LISTEN SHEET -->
+  <div class="bottomSheet" id="askSheet">
+    <div class="sheetHandle"></div>
+    <div class="sheetHeader">
+      <span class="sheetTitle">🎧 Ask &amp; Listen</span>
+      <button class="sheetClose" id="askSheetClose">✕</button>
+    </div>
+    <div class="sheetContent">
+      <div class="sectionHint">
+        Offline guidance — points you to the right pages.
+        <div class="sectionMeta">Decision-support only.</div>
+      </div>
+      <textarea id="questionSheet" rows="2" placeholder="Ask a question…" style="margin-top:8px;"></textarea>
+      <button id="askBtnSheet" style="width:100%;margin-top:8px;">Ask</button>
+      <div class="row" style="margin-top:10px;">
+        <button id="micBtnSheet" style="width:100%;">🎤 Hold to talk</button>
+      </div>
+      <div id="micStatusSheet" class="sectionMeta" style="margin-top:6px;"></div>
+      <div class="safetyLine" style="margin-top:8px;">Always verify in the official POH/AFM.</div>
+      <div id="bestPlacesWrapSheet" style="display:none;margin-top:10px;">
+        <div id="bestPlacesSheet"></div>
+      </div>
+      <div id="answerSheet" class="answer"></div>
+      <hr style="margin:16px 0;" />
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button id="readPageBtnSheet" style="flex:1;">Read page</button>
+        <button id="readSectionBtnSheet" style="flex:1;">Read section</button>
+        <button id="stopReadBtnSheet" style="flex:1;">Stop</button>
+        <button id="resumeReadBtnSheet" disabled style="flex:1;">Resume</button>
+      </div>
+      <div class="sheetSpeedRow">
+        <span class="sheetSpeedLabel">Speed</span>
+        <input id="speedRangeSheet" type="range" min="0.7" max="1.3" step="0.05" value="1.0" style="flex:1;">
       </div>
     </div>
+  </div>
 
-    <div class="welcomeActions">
-      <button id="welcomeContinueBtn" class="btnPrimary" type="button">Continue</button>
+  <!-- ============================================================
+       WELCOME OVERLAY
+       ============================================================ -->
+  <div id="welcomeOverlay" hidden>
+    <div id="welcomeModal" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+      <div class="wSplash" id="wSplash">
+        <img src="./apple-touch-icon-v2.png" alt="POH Reader" class="wSplashLogo" />
+        <div class="wSplashName">POH Reader</div>
+      </div>
+      <div class="wCard" id="wCard" aria-hidden="true">
+        <button id="welcomeClose" class="wClose" aria-label="Close">✕</button>
+        <div class="wLogoRow">
+          <img src="./apple-touch-icon-v2.png" alt="POH Reader" class="wCardLogo" />
+          <div>
+            <div class="wCardTitle" id="welcomeTitle">POH Reader</div>
+            <div class="wCardSub">Your aircraft manual, always ready.</div>
+          </div>
+        </div>
+        <p class="wLead">
+          Upload your POH or AFM and study it anywhere — even without internet.
+          Search for limits, listen while you drive, or ask what page covers fuel endurance.
+        </p>
+        <div class="wFeatures">
+          <div class="wFeature">
+            <span class="wFeatureIcon">📄</span>
+            <div>
+              <b>PDF Library</b>
+              <div class="wFeatureDesc">Your manuals stay on your device. No upload to any server.</div>
+            </div>
+          </div>
+          <div class="wFeature">
+            <span class="wFeatureIcon">🔍</span>
+            <div>
+              <b>Instant Search</b>
+              <div class="wFeatureDesc">Find limits, speeds, and procedures in seconds.</div>
+            </div>
+          </div>
+          <div class="wFeature wFeaturePaid">
+            <span class="wFeatureIcon">🎧</span>
+            <div>
+              <b>Read Aloud <span class="wBadge">PRO</span></b>
+              <div class="wFeatureDesc">Listen to any page or section — great for ground study.</div>
+            </div>
+          </div>
+          <div class="wFeature wFeaturePaid">
+            <span class="wFeatureIcon">💬</span>
+            <div>
+              <b>Ask <span class="wBadge">PRO</span></b>
+              <div class="wFeatureDesc">Offline keyword guidance — points you to the right pages.</div>
+            </div>
+          </div>
+        </div>
+        <div class="wSafety">
+          ⚠️ Decision-support only. Always verify in the official POH/AFM.
+          The pilot in command is solely responsible for aircraft operation.
+        </div>
+        <button id="welcomeContinueBtn" class="wContinueBtn" type="button">Get Started</button>
+      </div>
     </div>
   </div>
-</div>
 
-<script type="module" src="./app.js"></script>
+  <!-- ============================================================
+       PAYWALL OVERLAY
+       ============================================================ -->
+  <div id="paywallOverlay" hidden>
+    <div id="paywallModal" role="dialog" aria-modal="true" aria-labelledby="paywallTitle">
+      <button id="paywallClose" class="paywallClose" aria-label="Close">✕</button>
+      <div class="pwLogoRow">
+        <img src="./apple-touch-icon-v2.png" alt="POH Reader" class="pwLogo" />
+        <div>
+          <h3 id="paywallTitle" class="pwTitle">Unlock PRO</h3>
+          <div class="pwSub">One-time purchase — yours forever.</div>
+        </div>
+      </div>
+      <p id="paywallMsg" class="pwMsg">Unlock Read Aloud and Ask with a one-time purchase.</p>
+      <div class="pwFeatures">
+        <div class="pwFeature">🎧 <b>Read Aloud</b> — listen to any page or section</div>
+        <div class="pwFeature">💬 <b>Ask</b> — offline keyword guidance with page references</div>
+        <div class="pwFeature">🔄 <b>Resume</b> — pick up exactly where you stopped</div>
+      </div>
+      <div class="pwPrice">4,99 €</div>
+      <div class="pwPriceNote">One-time · No subscription · No ads</div>
+      <div class="pwActions">
+        <a id="paywallSubscribeBtn" class="pwBuyBtn" href="#" target="_blank" rel="noopener">Unlock PRO — 4,99 €</a>
+        <button id="paywallAlreadyBtn" class="pwAlreadyBtn" type="button">I already purchased</button>
+      </div>
+      <div id="paywallUnlockRow" class="pwUnlockRow" hidden>
+        <label class="pwUnlockLabel" for="paywallCode">Enter your unlock code</label>
+        <input id="paywallCode" type="text" inputmode="text" autocomplete="one-time-code" placeholder="e.g. POH-XXXX-XXXX" class="pwCodeInput" />
+        <button id="paywallUnlockBtn" class="pwUnlockBtn" type="button">Unlock</button>
+        <div id="paywallUnlockHint" class="pwUnlockHint">You received this code by email after purchasing.</div>
+      </div>
+      <div class="pwFooter">Manuals stay on your device. No account required.</div>
+    </div>
+  </div>
 
-<script>
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js?v=51")
-        .then(reg => {
-          console.log("SW registered:", reg.scope);
-        })
-        .catch(err => {
-          console.error("SW registration failed:", err);
-        });
-    });
-  }
-</script>
+  <script type="module" src="./app.js"></script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js?v=52")
+          .then(reg => console.log("SW registered:", reg.scope))
+          .catch(err => console.error("SW registration failed:", err));
+      });
+    }
+  </script>
 
 </body>
 </html>

@@ -1,7 +1,10 @@
 import * as pdfjsLib from "./pdf.mjs";
-
 // pdf.js worker served from /docs (GitHub Pages root)
 pdfjsLib.GlobalWorkerOptions.workerSrc = "./pdf.worker.min.mjs";
+
+// ─── Native TTS (iOS Capacitor) vs Web TTS (browser fallback) ───
+const isCapacitor = !!(window?.Capacitor?.isNativePlatform?.());
+const NativeTTS = isCapacitor ? (window?.Capacitor?.Plugins?.TextToSpeech ?? null) : null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -874,7 +877,61 @@ function getSelectedVoice() {
   return voices.find((v) => v.name === name) || null;
 }
 
+// ── Enhanced Voice Prompt (iOS only) ──────────────────────
+function showEnhancedVoicePrompt() {
+  if (!isCapacitor) return;
+  if (localStorage.getItem("pohVoicePromptSeen")) return;
+  localStorage.setItem("pohVoicePromptSeen", "1");
+
+  const banner = document.createElement("div");
+  banner.id = "voiceBanner";
+  banner.innerHTML = `
+    <div style="
+      position:fixed; bottom:110px; left:12px; right:12px;
+      background:#1a1f2e; border:1px solid rgba(77,163,255,0.4);
+      border-radius:16px; padding:14px 16px; z-index:9998;
+      box-shadow:0 8px 32px rgba(0,0,0,0.5);
+      display:flex; align-items:flex-start; gap:12px;
+    ">
+      <span style="font-size:22px;">🎙️</span>
+      <div style="flex:1;">
+        <div style="font-weight:700;color:#fff;font-size:13px;">
+          Get a better voice
+        </div>
+        <div style="color:#9aa4b2;font-size:12px;margin-top:3px;line-height:1.4;">
+          Download <b style="color:#e9edf3;">Daniel (Enhanced)</b> in iOS Settings
+          for a much more natural reading voice.
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button onclick="
+            if(window.Capacitor?.Plugins?.App) {
+              window.Capacitor.Plugins.App.openUrl({url:'app-settings:'});
+            }
+            document.getElementById('voiceBanner')?.remove();
+          " style="
+            background:#4da3ff;border:none;color:#fff;
+            padding:8px 14px;border-radius:10px;font-weight:700;font-size:12px;
+          ">Open Settings</button>
+          <button onclick="document.getElementById('voiceBanner')?.remove();" style="
+            background:transparent;border:1px solid rgba(255,255,255,0.15);
+            color:#9aa4b2;padding:8px 14px;border-radius:10px;font-size:12px;
+          ">Dismiss</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(banner);
+  setTimeout(() => banner.remove(), 18000);
+}
+
 function refreshVoices() {
+  // On iOS native TTS, hide the voice selector — AVSpeechSynthesizer handles it
+  if (isCapacitor && NativeTTS) {
+    if (voiceSelect) {
+      voiceSelect.closest("label")?.style.setProperty("display", "none");
+    }
+    return;
+  }
   voices = window.speechSynthesis?.getVoices?.() || [];
   if (!voiceSelect) return;
 
@@ -957,7 +1014,11 @@ function stopTts({ keepProgress = true } = {}) {
   try {
     ttsWasCancelled = true;
     ttsKeepProgressOnCancel = keepProgress;
-    window.speechSynthesis.cancel();
+    if (NativeTTS) {
+      NativeTTS.stop().catch(() => {});
+    } else {
+      window.speechSynthesis.cancel();
+    }
   } catch {}
 
   ttsSpeaking = false;
@@ -1015,6 +1076,7 @@ async function speakChunked(text, { page, label } = {}, { resume = false } = {})
   if (!chunks.length) return;
 
   ttsSpeaking = true;
+  showEnhancedVoicePrompt();
   lastReadProgress = { page, key, offset, label, started: false };
   refreshResumeBtn();
 
@@ -1079,7 +1141,37 @@ async function speakChunked(text, { page, label } = {}, { resume = false } = {})
       refreshResumeBtn();
     }
 
-    window.speechSynthesis.speak(u);
+    if (NativeTTS) {
+      NativeTTS.speak({
+        text: chunk,
+        lang: guessLang(chunk) === "de" ? "de-DE" : "en-GB",
+        rate: Number.isFinite(rate) ? rate * 0.92 : 0.92,
+        pitch: 0.88,
+        volume: 1.0,
+      }).then(() => {
+        if (ttsWasCancelled) {
+          ttsWasCancelled = false;
+          if (!ttsKeepProgressOnCancel) lastReadProgress = null;
+          refreshResumeBtn();
+          return;
+        }
+        if (lastReadProgress) lastReadProgress.offset += chunk.length;
+        refreshResumeBtn();
+        speakNext();
+      }).catch((e) => {
+        const err = String(e?.message || "").toLowerCase();
+        if (!ttsUserStopped && (err.includes("interrupt") || err.includes("cancel"))) {
+          if (lastReadProgress) lastReadProgress.offset += chunk.length;
+          refreshResumeBtn();
+          setTimeout(speakNext, 80);
+          return;
+        }
+        ttsSpeaking = false;
+        refreshResumeBtn();
+      });
+    } else {
+      window.speechSynthesis.speak(u);
+    }
   };
 
   speakNext();
@@ -1600,7 +1692,7 @@ function showPaywall(featureName = "this feature") {
   const unlockRow = document.getElementById("paywallUnlockRow");
   const code = document.getElementById("paywallCode");
 
-  if (msg) msg.textContent = `Unlock ${featureName} with Pilot Subscription (7,99 € / month).`;
+if (msg) msg.textContent = `Unlock ${featureName} with POH Reader PRO (4,99 € one-time).`;
   unlockRow?.setAttribute("hidden", "");
   if (code) code.value = "";
 
@@ -1640,9 +1732,9 @@ const SUBSCRIBE_URL = "https://buy.stripe.com/5kQaEXccuguagFt6yo6AM00";
   const raw = (codeInput?.value || "").trim();
   const code = raw.toUpperCase();
 
-  // ✅ TEMP: accept your test code
-  if (code !== "POH-PILOT-001") {
-    alert("Invalid code. Please paste the code you received after subscribing.");
+  const VALID_CODES = new Set(["POH-PILOT-2025", "POH-BETA-001", "POH-BETA-002", "POH-BETA-003"]);
+  if (!VALID_CODES.has(code)) {
+    alert("Invalid code. Please check the code you received after purchasing.");
     return;
   }
 
@@ -1770,7 +1862,7 @@ if (overlay && isUnlocked) overlay.hidden = true;   // only force-hide when unlo
 // if NOT unlocked → do nothing (keep it hidden unless user triggers it)
 
   // Gate buttons (only if they exist)
-  const askBtn = document.getElementById("askBtn"); // optional
+  // askBtn already declared above
   if (askBtn) askBtn.disabled = !isUnlocked;
 
   // Your mobile bottom "Read page" button is bottomSearch
@@ -1793,53 +1885,48 @@ window.addEventListener("DOMContentLoaded", async () => {
 // Welcome overlay (first run)
 // ================================
 const WELCOME_KEY = "pohWelcomeSeen";
-
-function showWelcome() {
-  document.getElementById("welcomeOverlay")?.removeAttribute("hidden");
-}
-
+ 
 function hideWelcome() {
   document.getElementById("welcomeOverlay")?.setAttribute("hidden", "");
   localStorage.setItem(WELCOME_KEY, "1");
 }
-
+ 
 (function initWelcomeUI() {
-  const overlay = document.getElementById("welcomeOverlay");
+  const overlay  = document.getElementById("welcomeOverlay");
+  const splash   = document.getElementById("wSplash");
+  const card     = document.getElementById("wCard");
   const closeBtn = document.getElementById("welcomeClose");
   const continueBtn = document.getElementById("welcomeContinueBtn");
-  const modal = document.getElementById("welcomeModal");
-
-  // show on first run only
-  if (localStorage.getItem(WELCOME_KEY) !== "1") {
-    showWelcome();
-
-    // Optional: logo-first splash for 700ms, then show card/actions
-    modal?.classList.add("splashOnly");
-    setTimeout(() => modal?.classList.remove("splashOnly"), 700);
-  }
-
+ 
+  // Only show on first run
+  if (localStorage.getItem(WELCOME_KEY) === "1") return;
+ 
+  overlay?.removeAttribute("hidden");
+ 
+  // After 1.2 s: fade out splash, fade in card
+  setTimeout(() => {
+    splash?.classList.add("wFadeOut");
+ 
+    setTimeout(() => {
+      if (splash) splash.style.display = "none";
+      if (card) {
+        card.style.display = "block";
+        card.removeAttribute("aria-hidden");
+        // trigger animation
+        requestAnimationFrame(() => card.classList.add("wVisible"));
+      }
+    }, 400); // matches wFadeOut duration
+ 
+  }, 1200);
+ 
   closeBtn?.addEventListener("click", hideWelcome);
   continueBtn?.addEventListener("click", hideWelcome);
-
-  // Tap outside closes
+ 
   overlay?.addEventListener("click", (e) => {
     if (e.target === overlay) hideWelcome();
   });
 })();
-
-  document.getElementById("paywallOverlay")?.setAttribute("hidden", "");
-
-    window.__unlock = () => setUnlocked(true);
-  window.__lock = () => setUnlocked(false);
-  window.__license = () => ({ isUnlocked, ls: localStorage.getItem(LICENSE_KEY) });
-
-  enablePdfDependentControls(false);
-  setPageInfo();
-
-  if ("speechSynthesis" in window) {
-    refreshVoices();
-    window.speechSynthesis.onvoiceschanged = refreshVoices;
-  }
+ 
 
   if (speedRange) speedRange.value = "0.9";
 
@@ -1920,6 +2007,11 @@ window.__POH = window.__POH || {};
 window.__POH.getPageTextForTts = getPageTextForTts;
 window.__POH.pageNum = () => pageNum;
 window.__POH.renderBestPlaces = renderBestPlaces;
+window.goToPage = goToPage;
+window.closeAllSheets = () => {
+  document.querySelectorAll('.bottomSheet').forEach(s => s.classList.remove('sheetOpen'));
+  document.getElementById('sheetBackdrop')?.classList.remove('backdropVisible');
+};
 
 // Register Service Worker (GitHub Pages-safe)
 if ("serviceWorker" in navigator) {
@@ -1930,60 +2022,366 @@ if ("serviceWorker" in navigator) {
       .catch((err) => console.error("[SW] registration failed:", err));
   });
 }
-
 });
 
-/* ===============================
-   Bottom Dock Collapse / Expand
-   + Backdrop tap-to-close
-================================= */
+/* ============================================================
+   MOBILE BOTTOM SHEET SYSTEM
+   Add this entire block at the END of app.js,
+   replacing the old "Bottom Dock Collapse / Expand" section
+   ============================================================ */
 
-const dock = document.getElementById("bottomDock");
-const toggle = document.getElementById("bottomDockToggle");
-const backdrop = document.getElementById("dockBackdrop");
+// ── Mobile Bottom Sheet System ────────────────────────────────
+(function initMobileSheets() {
+  const isMobile = () => window.innerWidth <= 768;
 
-if (dock && toggle) {
-  const isCollapsed = () => dock.classList.contains("dockCollapsed");
+  // Sheet elements
+  const backdrop     = document.getElementById("sheetBackdrop");
+  const librarySheet = document.getElementById("librarySheet");
+  const searchSheet  = document.getElementById("searchSheet");
+  const askSheet     = document.getElementById("askSheet");
 
-  const applyDockHeight = () => {
-    // MUST match your CSS: body padding uses --dockH
-    document.documentElement.style.setProperty("--dockH", isCollapsed() ? "26px" : "96px");
-  };
+  // Action bar buttons
+  const mabPrev    = document.getElementById("mabPrev");
+  const mabNext    = document.getElementById("mabNext");
+  const mabUpload  = document.getElementById("mabUpload");
+  const mabLibrary = document.getElementById("mabLibrary");
+  const mabSearch  = document.getElementById("mabSearch");
+  const mabAsk     = document.getElementById("mabAsk");
 
-  const refreshIcon = () => {
-    toggle.textContent = isCollapsed() ? "▲" : "▼";
-  };
+  // Sheet close buttons
+  const libraryClose = document.getElementById("librarySheetClose");
+  const searchClose  = document.getElementById("searchSheetClose");
+  const askClose     = document.getElementById("askSheetClose");
 
-  const setExpandedState = (expanded) => {
-    dock.classList.toggle("dockCollapsed", !expanded);
-    document.body.classList.toggle("dockExpanded", expanded);
+  // TTS mini bar
+  const ttsMiniBar   = document.getElementById("ttsMiniBar");
+  const ttsBarLabel  = document.getElementById("ttsBarLabel");
+  const ttsBarStop   = document.getElementById("ttsBarStop");
+  const ttsBarResume = document.getElementById("ttsBarResume");
 
-    localStorage.setItem("bottomDockState", expanded ? "expanded" : "collapsed");
+  let activeSheet = null;
 
-    refreshIcon();
-    applyDockHeight();
-  };
+  function openSheet(sheet) {
+    if (!isMobile()) return;
+    if (activeSheet && activeSheet !== sheet) closeSheet(activeSheet, false);
+    activeSheet = sheet;
+    sheet?.classList.add("sheetOpen");
+    backdrop?.classList.add("backdropVisible");
+  }
 
-  // Restore saved state
-  const saved = localStorage.getItem("bottomDockState");
-  setExpandedState(saved !== "collapsed"); // default expanded unless user collapsed
+  function closeSheet(sheet, clearActive = true) {
+    sheet?.classList.remove("sheetOpen");
+    if (clearActive) {
+      backdrop?.classList.remove("backdropVisible");
+      activeSheet = null;
+    }
+  }
 
-  // Toggle button
-  toggle.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setExpandedState(isCollapsed()); // if collapsed -> expand, if expanded -> collapse
+  function closeAll() {
+    [librarySheet, searchSheet, askSheet].forEach(s => closeSheet(s, false));
+    backdrop?.classList.remove("backdropVisible");
+    activeSheet = null;
+  }
+
+  // Backdrop tap closes
+  backdrop?.addEventListener("click", closeAll);
+
+  // Open buttons
+  mabLibrary?.addEventListener("click", () => openSheet(librarySheet));
+  mabSearch?.addEventListener("click",  () => openSheet(searchSheet));
+  mabAsk?.addEventListener("click",     () => openSheet(askSheet));
+
+  // Close buttons
+  libraryClose?.addEventListener("click", closeAll);
+  searchClose?.addEventListener("click",  closeAll);
+  askClose?.addEventListener("click",     closeAll);
+
+  // Nav buttons
+  mabPrev?.addEventListener("click", async () => {
+    if (!pdfDoc || pageNum <= 1) return;
+    await goToPage(pageNum - 1);
   });
 
-  // Backdrop click collapses dock
-  if (backdrop) {
-    backdrop.addEventListener("click", () => {
-      setExpandedState(false);
+  mabNext?.addEventListener("click", async () => {
+    if (!pdfDoc || pageNum >= pageCount) return;
+    await goToPage(pageNum + 1);
+  });
+
+  // Upload
+mabUpload?.addEventListener("click", (e) => {
+    e.preventDefault();
+    const f = document.getElementById("file");
+    if (f) {
+      f.value = "";
+      f.click();
+    }
+  });
+
+  // TTS mini bar: auto-show/hide when reading
+  // Patch into the existing refreshResumeBtn cycle
+  const _origRefreshResumeBtn = window.__origRefreshResumeBtn || null;
+
+  function updateTtsMiniBar() {
+    if (!isMobile() || !ttsMiniBar) return;
+
+    if (ttsSpeaking) {
+      ttsMiniBar.classList.add("ttsActive");
+      if (ttsBarLabel) {
+        const section = getSectionForPage(pageNum);
+        ttsBarLabel.textContent = section
+          ? `Reading: ${section}`
+          : `Reading page ${pageNum}`;
+      }
+    } else {
+      ttsMiniBar.classList.remove("ttsActive");
+    }
+
+    if (ttsBarResume) {
+      ttsBarResume.style.display = (!ttsSpeaking && lastReadProgress && (lastReadProgress.offset || 0) > 0)
+        ? "grid" : "none";
+    }
+  }
+
+  // Hook TTS mini bar into stop/resume buttons
+  ttsBarStop?.addEventListener("click", () => {
+    stopTts({ keepProgress: true });
+    updateTtsMiniBar();
+  });
+
+  ttsBarResume?.addEventListener("click", async () => {
+    await resumeTts();
+    updateTtsMiniBar();
+  });
+
+  // Periodically sync mini bar state
+  setInterval(updateTtsMiniBar, 600);
+
+  // Swipe down to close sheets
+  let touchStartY = 0;
+
+  [librarySheet, searchSheet, askSheet].forEach(sheet => {
+    if (!sheet) return;
+
+    sheet.addEventListener("touchstart", (e) => {
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    sheet.addEventListener("touchmove", (e) => {
+      const dy = e.touches[0].clientY - touchStartY;
+      if (dy > 60) closeAll();
+    }, { passive: true });
+  });
+
+  // Auto-close sheet after section/search jump
+  const origGoToPage = window.__origGoToPage;
+
+  // Close ask sheet after asking (keep results visible briefly)
+  // askBtn already declared above
+  if (askBtn) {
+    const origClick = askBtn.onclick;
+    askBtn.addEventListener("click", () => {
+      // Sheet stays open to show results — user closes manually
     });
   }
 
-  // Optional: ESC key collapses (nice on desktop)
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") setExpandedState(false);
+  // After search result click, close sheet
+  // searchResults already declared above
+  if (searchResults) {
+    searchResults.addEventListener("click", (e) => {
+      if (e.target.closest(".hit")) {
+        setTimeout(closeAll, 300);
+      }
+    });
+  }
+
+  // After section click, close sheet
+  // sectionsList already declared above
+  if (sectionsList) {
+    sectionsList.addEventListener("click", (e) => {
+      if (e.target.closest(".sectionBtn")) {
+        setTimeout(closeAll, 300);
+      }
+    });
+  }
+
+  // Disable action bar buttons until PDF loaded
+  function syncActionBarState() {
+    const hasPdf = !!pdfDoc;
+    if (mabPrev) mabPrev.disabled = !hasPdf || pageNum <= 1;
+    if (mabNext) mabNext.disabled = !hasPdf || pageNum >= pageCount;
+  }
+
+  setInterval(syncActionBarState, 500);
+
+  // ── Wire Sheet-suffixed IDs to core functions ──────────────
+  // Search sheet
+  const searchInputSheet = document.getElementById("searchInputSheet");
+  const searchBtnSheet = document.getElementById("searchBtnSheet");
+  const searchResultsSheet = document.getElementById("searchResultsSheet");
+
+  searchBtnSheet?.addEventListener("click", async () => {
+    if (!pdfDoc) return;
+    const q = searchInputSheet?.value || "";
+    if (!q) return;
+    if (searchResultsSheet) searchResultsSheet.innerHTML = `<div style="opacity:.7;font-size:12px;">Searching…</div>`;
+    searchCancelToken.cancel = false;
+    const ql = q.toLowerCase();
+    const hits = [];
+    for (let p = 1; p <= pageCount; p++) {
+      if (searchCancelToken.cancel) break;
+      const text = await getPageText(p);
+      if (text) {
+        const pos = text.toLowerCase().indexOf(ql);
+        if (pos >= 0) {
+          hits.push({ page: p, context: text.slice(Math.max(0,pos-80), pos+q.length+120) });
+          if (hits.length >= 60) break;
+        }
+      }
+      if (p % 12 === 0) await sleep(0);
+    }
+    if (!searchResultsSheet) return;
+    if (!hits.length) { searchResultsSheet.innerHTML = `<div style="opacity:.7;font-size:12px;">No hits found.</div>`; return; }
+    const wrap = document.createElement("div");
+    for (const h of hits) {
+      const item = document.createElement("div");
+      item.className = "hit";
+      item.innerHTML = `<div style="font-weight:600;">Page ${h.page}</div><div style="opacity:.8;font-size:12px;margin-top:6px;">${escapeHtml(h.context)}</div>`;
+      item.addEventListener("click", async () => { await goToPage(h.page); setTimeout(closeAll, 300); });
+      wrap.appendChild(item);
+    }
+    searchResultsSheet.innerHTML = "";
+    searchResultsSheet.appendChild(wrap);
   });
-}
+
+  searchInputSheet?.addEventListener("keydown", async (e) => {
+    if (e.key === "Enter") { e.preventDefault(); searchBtnSheet?.click(); }
+  });
+
+  // Ask sheet
+  const questionSheet = document.getElementById("questionSheet");
+  const askBtnSheet = document.getElementById("askBtnSheet");
+  const answerSheet = document.getElementById("answerSheet");
+  const bestPlacesWrapSheet = document.getElementById("bestPlacesWrapSheet");
+  const bestPlacesSheet = document.getElementById("bestPlacesSheet");
+
+  askBtnSheet?.addEventListener("click", async () => {
+    if (!requirePaid("Ask")) return;
+    const q = (questionSheet?.value || "").trim();
+    if (!q || !pdfDoc) return;
+    if (answerSheet) answerSheet.innerHTML = `<div style="opacity:.85;">Searching…</div>`;
+    if (bestPlacesWrapSheet) bestPlacesWrapSheet.style.display = "none";
+    const { hits, done } = await runLocalAskIncremental(q, { timeBudgetMs: 1200, maxReturn: 7 });
+    if (!hits.length) {
+      if (answerSheet) answerSheet.innerHTML = `<div style="font-weight:700;">No strong matches found.</div><div style="opacity:.8;margin-top:8px;">Try shorter keywords.</div>`;
+      return;
+    }
+    if (bestPlacesWrapSheet && bestPlacesSheet) {
+    bestPlacesWrapSheet.style.display = "block";
+      bestPlacesSheet.innerHTML = hits.map((h, idx) => `
+        <div class="bestPlaceCard">
+          <div class="bestPlaceTitle">${idx+1}. ${escapeHtml(h.sectionTitle||"Best place to look")}</div>
+          ${h.excerpt ? `<div class="bestPlaceExcerpt">${escapeHtml(h.excerpt)}</div>` : ""}
+          <div class="bestPlaceActions">
+            <button class="bestPlaceBtn" onclick="window.goToPage(${h.page});setTimeout(window.closeAllSheets,300);">Jump p.${h.page}</button>
+            <button class="bestPlaceBtn" onclick="window.readPageBtnSheet_click(${h.page})">Read</button>
+          </div>
+        </div>`).join("");
+    }
+    if (answerSheet) answerSheet.innerHTML = done ? "" : `<button id="askMoreBtnSheet">Search more</button>`;
+    document.getElementById("askMoreBtnSheet")?.addEventListener("click", () => askBtnSheet?.click());
+  });
+
+  window.readPageBtnSheet_click = async (p) => {
+    if (!requirePaid("Read aloud")) return;
+    await goToPage(p);
+    const text = await getPageTextForTts(p);
+    await speakChunked(text || "No readable text.", { page: p, label: "page" }, { resume: false });
+  };
+
+  // TTS sheet buttons
+  document.getElementById("readPageBtnSheet")?.addEventListener("click", () => {
+    if (!requirePaid("Read aloud")) return;
+    readCurrentPage();
+  });
+  document.getElementById("readSectionBtnSheet")?.addEventListener("click", () => {
+    if (!requirePaid("Read aloud")) return;
+    readCurrentSection();
+  });
+  document.getElementById("stopReadBtnSheet")?.addEventListener("click", () => {
+    stopTts({ keepProgress: true });
+    refreshResumeBtn();
+  });
+  document.getElementById("resumeReadBtnSheet")?.addEventListener("click", resumeTts);
+
+  // Speed sheet sync
+  const speedRangeSheet = document.getElementById("speedRangeSheet");
+  speedRangeSheet?.addEventListener("input", () => {
+    if (speedRange) speedRange.value = speedRangeSheet.value;
+  });
+
+  // Sections sheet
+  const sectionFilterSheet = document.getElementById("sectionFilterSheet");
+  const sectionsListSheet = document.getElementById("sectionsListSheet");
+
+  sectionFilterSheet?.addEventListener("input", () => {
+    const q = (sectionFilterSheet.value || "").trim().toLowerCase();
+    sectionsListSheet?.querySelectorAll("button.sectionBtn").forEach(btn => {
+      btn.style.display = !q || btn.textContent.toLowerCase().includes(q) ? "" : "none";
+    });
+  });
+
+  // Sync sections list to sheet when PDF loads
+  const _origBuildOutline = window.__origBuildOutline;
+  function syncSectionsToSheet() {
+    if (!sectionsListSheet || !sectionsList) return;
+    sectionsListSheet.innerHTML = "";
+    sectionRanges.forEach((s, i) => {
+      const btn = document.createElement("button");
+      btn.className = "sectionBtn";
+      btn.style.cssText = "width:100%;text-align:left;";
+      const indent = s.level ? "&nbsp;".repeat(Math.min(6, s.level) * 2) : "";
+      btn.innerHTML = `${indent}${escapeHtml(s.title)} <span style="opacity:.7;">(p.${s.start})</span>`;
+      btn.addEventListener("click", async () => {
+        currentSectionIndex = i;
+        await goToPage(s.start);
+        setTimeout(closeAll, 300);
+      });
+      sectionsListSheet.appendChild(btn);
+    });
+  }
+
+  // Poll for sections to appear (after PDF loads)
+  setInterval(() => {
+    if (sectionRanges.length > 0 && sectionsListSheet && sectionsListSheet.children.length === 0) {
+      syncSectionsToSheet();
+    }
+  }, 800);
+
+  // Mic sheet button
+  const micBtnSheet = document.getElementById("micBtnSheet");
+  const micStatusSheet = document.getElementById("micStatusSheet");
+  if (micBtnSheet) {
+    micBtnSheet.addEventListener("pointerdown", async (e) => {
+      e.preventDefault();
+      if (isHolding) return;
+      isHolding = true;
+      const ok = await ensureMicPermission();
+      if (!ok) { if (micStatusSheet) micStatusSheet.textContent = "Mic permission denied."; isHolding = false; return; }
+      if (!micReady) setupSpeechRecognition();
+      if (!micReady) { isHolding = false; return; }
+      if (micStatusSheet) micStatusSheet.textContent = "Listening…";
+      startListening();
+    });
+    const endHoldSheet = (e) => {
+      e.preventDefault();
+      if (!isHolding) return;
+      isHolding = false;
+      stopListening();
+      if (micStatusSheet) micStatusSheet.textContent = "Mic ready. Hold to talk.";
+    };
+    micBtnSheet.addEventListener("pointerup", endHoldSheet);
+    micBtnSheet.addEventListener("pointercancel", endHoldSheet);
+    micBtnSheet.addEventListener("pointerleave", endHoldSheet);
+  }
+
+})();
