@@ -322,6 +322,7 @@ async function renderPage(num) {
 async function goToPage(p) {
   if (!pdfDoc) return;
   pageNum = Math.max(1, Math.min(pageCount, p));
+  window.__resetPinchZoom?.();
   await renderPage(pageNum);
   updateCurrentSectionFromPage();
 
@@ -1259,22 +1260,25 @@ async function ensureMicPermission() {
 }
 
 function setupSpeechRecognition() {
+  // Native speech recognition for Capacitor iOS
+  if (isCapacitor && window?.Capacitor?.Plugins?.SpeechRecognition) {
+    micReady = true;
+    return;
+  }
+  // Web fallback
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
     setMicStatus("Mic not supported in this browser.");
     if (micBtn) micBtn.disabled = true;
     return;
   }
-
   recognition = new SR();
   recognition.lang = "en-US";
-  recognition.interimResults = true;
+  recognition.interimResults = false;
   recognition.continuous = false;
-
-  recognition.onstart = () => setMicStatus("Listening…");
+  recognition.onstart = () => setMicStatus("Listening\u2026");
   recognition.onend = () => setMicStatus("Mic ready. Hold to talk.");
-  recognition.onerror = (e) => setMicStatus(`Mic error: ${e?.error || "unknown"}`);
-
+  recognition.onerror = (e) => setMicStatus("Mic error: " + (e?.error || "unknown"));
   recognition.onresult = (event) => {
     let transcript = "";
     for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -1282,25 +1286,53 @@ function setupSpeechRecognition() {
     }
     transcript = transcript.trim();
     if (!transcript) return;
-
-    const last = event.results[event.results.length - 1];
-    if (last.isFinal) {
-      if (questionEl) questionEl.value = transcript;
-      setMicStatus(`Heard: "${transcript}"`);
-    } else {
-      setMicStatus(`Listening… "${transcript}"`);
-    }
+    if (questionEl) questionEl.value = transcript;
+    const questionSheet = document.getElementById("questionSheet");
+    if (questionSheet) questionSheet.value = transcript;
+    setMicStatus("Heard: " + transcript);
   };
-
   micReady = true;
 }
 
-function startListening() {
+async function startListening() {
+  if (isCapacitor && window?.Capacitor?.Plugins?.SpeechRecognition) {
+    const NativeSR = window.Capacitor.Plugins.SpeechRecognition;
+    try {
+      const available = await NativeSR.available();
+      if (!available?.available) { setMicStatus("Speech recognition not available."); return; }
+      const perm = await NativeSR.requestPermissions();
+      setMicStatus("Listening\u2026");
+      const result = await NativeSR.start({
+        language: "en-US",
+        maxResults: 1,
+        prompt: "Ask about your aircraft manual",
+        partialResults: false,
+        popup: false,
+      });
+      const transcript = (result?.matches?.[0] || "").trim();
+      if (transcript) {
+        if (questionEl) questionEl.value = transcript;
+        const questionSheet = document.getElementById("questionSheet");
+        if (questionSheet) questionSheet.value = transcript;
+        setMicStatus("Heard: " + transcript);
+      } else {
+        setMicStatus("Mic ready. Hold to talk.");
+      }
+    } catch (e) {
+      setMicStatus("Mic ready. Hold to talk.");
+    }
+    return;
+  }
   if (!recognition) return;
   try { recognition.start(); } catch {}
 }
 
 function stopListening() {
+  if (isCapacitor && window?.Capacitor?.Plugins?.SpeechRecognition) {
+    try { window.Capacitor.Plugins.SpeechRecognition.stop(); } catch {}
+    setMicStatus("Mic ready. Hold to talk.");
+    return;
+  }
   if (!recognition) return;
   try { recognition.stop(); } catch {}
 }
@@ -2059,41 +2091,66 @@ if ("serviceWorker" in navigator) {
    ============================================================ */
 
 
-// ── Pinch-to-zoom on PDF canvas ──────────────────────────────
+// ── Pinch-to-zoom + pan on PDF canvas ────────────────────────
 (function initPinchZoom() {
   const viewer = document.querySelector('.viewer');
   const canvas = document.getElementById('canvas');
   if (!viewer || !canvas) return;
-
-  let scale = 1;
-  let lastDist = null;
-
+  let scale = 1, panX = 0, panY = 0;
+  let lastDist = null, lastMidX = 0, lastMidY = 0;
+  let lastSingleX = null, lastSingleY = null;
+  function applyTransform() {
+    canvas.style.transform = "translate(" + panX + "px, " + panY + "px) scale(" + scale + ")";
+    canvas.style.transformOrigin = 'top left';
+  }
+  function resetTransform() {
+    scale = 1; panX = 0; panY = 0; applyTransform();
+  }
+  window.__resetPinchZoom = resetTransform;
   viewer.addEventListener('touchstart', (e) => {
     if (e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       lastDist = Math.sqrt(dx*dx + dy*dy);
+      lastMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      lastMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      lastSingleX = null; lastSingleY = null;
+    } else if (e.touches.length === 1 && scale > 1.05) {
+      lastSingleX = e.touches[0].clientX;
+      lastSingleY = e.touches[0].clientY;
     }
   }, { passive: true });
-
   viewer.addEventListener('touchmove', (e) => {
     if (e.touches.length === 2 && lastDist) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const dist = Math.sqrt(dx*dx + dy*dy);
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
       const delta = dist / lastDist;
-      scale = Math.min(Math.max(scale * delta, 0.5), 4.0);
-      canvas.style.transform = `scale(${scale})`;
-      canvas.style.transformOrigin = 'top center';
-      lastDist = dist;
+      const rect = canvas.getBoundingClientRect();
+      panX += (midX - rect.left) * (1 - delta) + (midX - lastMidX);
+      panY += (midY - rect.top) * (1 - delta) + (midY - lastMidY);
+      scale = Math.min(Math.max(scale * delta, 0.8), 5.0);
+      lastDist = dist; lastMidX = midX; lastMidY = midY;
+      applyTransform();
+    } else if (e.touches.length === 1 && scale > 1.05 && lastSingleX !== null) {
+      panX += e.touches[0].clientX - lastSingleX;
+      panY += e.touches[0].clientY - lastSingleY;
+      lastSingleX = e.touches[0].clientX;
+      lastSingleY = e.touches[0].clientY;
+      applyTransform();
     }
   }, { passive: true });
-
   viewer.addEventListener('touchend', (e) => {
     if (e.touches.length < 2) lastDist = null;
-    if (e.touches.length === 0 && scale < 1.05) {
-      scale = 1;
-      canvas.style.transform = 'scale(1)';
+    if (e.touches.length === 1 && scale > 1.05) {
+      lastSingleX = e.touches[0].clientX;
+      lastSingleY = e.touches[0].clientY;
+    }
+    if (e.touches.length === 0) {
+      lastSingleX = null; lastSingleY = null;
+      if (scale < 1.05) resetTransform();
     }
   }, { passive: true });
 })();
