@@ -302,7 +302,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 
   body {
     padding-bottom: 0;
-    overflow: hidden;
+    overflow: visible;
     height: 100dvh;
   }
 
@@ -326,7 +326,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
     padding: 0;
     height: calc(100dvh - env(safe-area-inset-top) - 52px);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
   }
 
   /* Hide desktop panels */

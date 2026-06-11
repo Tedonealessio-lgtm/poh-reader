@@ -1405,8 +1405,6 @@ async function restoreLastPdfOnStartup() {
 }
 
 async function refreshLibrarySelectUI() {
-  if (!librarySelect) return;
-
   let items = [];
   try {
     items = await idbGetAll(STORE_PDFS);
@@ -1414,28 +1412,58 @@ async function refreshLibrarySelectUI() {
     console.warn("Could not read library:", e);
     return;
   }
-
-  librarySelect.innerHTML = "";
-
-  if (!items.length) {
-    const opt = document.createElement("option");
-    opt.value = "";
-    opt.textContent = "(No saved PDFs yet)";
-    librarySelect.appendChild(opt);
-    return;
-  }
-
   items.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
 
-  for (const it of items) {
-    const opt = document.createElement("option");
-    opt.value = it.id;
-    opt.textContent = it.name || it.id;
-    librarySelect.appendChild(opt);
+  if (librarySelect) {
+    librarySelect.innerHTML = "";
+    if (!items.length) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "(No saved PDFs yet)";
+      librarySelect.appendChild(opt);
+    } else {
+      for (const it of items) {
+        const opt = document.createElement("option");
+        opt.value = it.id;
+        opt.textContent = it.name || it.id;
+        librarySelect.appendChild(opt);
+      }
+      if (currentPdfId && items.some((x) => x.id === currentPdfId)) {
+        librarySelect.value = currentPdfId;
+      }
+    }
   }
 
-  if (currentPdfId && items.some((x) => x.id === currentPdfId)) {
-    librarySelect.value = currentPdfId;
+  const sheetList = document.getElementById("librarySheetList");
+  if (sheetList) {
+    sheetList.innerHTML = "";
+    if (!items.length) {
+      const empty = document.createElement("div");
+      empty.style.cssText = "opacity:.6;font-size:13px;";
+      empty.textContent = "(No saved PDFs yet)";
+      sheetList.appendChild(empty);
+    } else {
+      for (const it of items) {
+        const isActive = it.id === currentPdfId;
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--card);border-radius:12px;border:1px solid var(--border);margin-bottom:6px;";
+        const nameEl = document.createElement("span");
+        nameEl.style.cssText = "flex:1;font-size:13px;font-weight:" + (isActive?"700":"400") + ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+        nameEl.textContent = (isActive ? "▶ " : "") + (it.name || it.id);
+        const openBtn = document.createElement("button");
+        openBtn.textContent = "Open";
+        openBtn.style.cssText = "font-size:11px;padding:5px 10px;flex-shrink:0;";
+        openBtn.addEventListener("click", () => window.__openFromSheet(it.id));
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Delete";
+        delBtn.style.cssText = "font-size:11px;padding:5px 10px;flex-shrink:0;background:rgba(255,80,80,0.1);border-color:rgba(255,80,80,0.3);color:#ff6060;";
+        delBtn.addEventListener("click", () => window.__deleteFromSheet(it.id));
+        row.appendChild(nameEl);
+        row.appendChild(openBtn);
+        row.appendChild(delBtn);
+        sheetList.appendChild(row);
+      }
+    }
   }
 }
 
@@ -2029,6 +2057,67 @@ if ("serviceWorker" in navigator) {
    Add this entire block at the END of app.js,
    replacing the old "Bottom Dock Collapse / Expand" section
    ============================================================ */
+
+
+// ── Pinch-to-zoom on PDF canvas ──────────────────────────────
+(function initPinchZoom() {
+  const viewer = document.querySelector('.viewer');
+  const canvas = document.getElementById('canvas');
+  if (!viewer || !canvas) return;
+
+  let scale = 1;
+  let lastDist = null;
+
+  viewer.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastDist = Math.sqrt(dx*dx + dy*dy);
+    }
+  }, { passive: true });
+
+  viewer.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && lastDist) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const delta = dist / lastDist;
+      scale = Math.min(Math.max(scale * delta, 0.5), 4.0);
+      canvas.style.transform = `scale(${scale})`;
+      canvas.style.transformOrigin = 'top center';
+      lastDist = dist;
+    }
+  }, { passive: true });
+
+  viewer.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) lastDist = null;
+    if (e.touches.length === 0 && scale < 1.05) {
+      scale = 1;
+      canvas.style.transform = 'scale(1)';
+    }
+  }, { passive: true });
+})();
+
+window.__openFromSheet = async (id) => {
+  try {
+    const rec = await loadPdfFromLibrary(id);
+    if (!rec?.buffer) return;
+    currentPdfId = rec.id;
+    currentPdfName = rec.name || "";
+    await openWithRetries(rec.buffer, { tries: 3, delayMs: 250 });
+    setLibraryStatus("Opened ✅");
+    window.closeAllSheets?.();
+  } catch (err) { console.error(err); }
+};
+
+window.__deleteFromSheet = async (id) => {
+  if (!confirm("Delete this PDF?")) return;
+  try {
+    await deletePdfFromLibrary(id);
+    await refreshLibrarySelectUI();
+    setLibraryStatus("Deleted ✅");
+  } catch (err) { console.error(err); }
+};
 
 // ── Mobile Bottom Sheet System ────────────────────────────────
 (function initMobileSheets() {
