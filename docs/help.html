@@ -4,9 +4,441 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>POH Reader — Help & User Guide</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f5f7fb;
+      color: #1a1a2e;
+      padding: 0;
+      margin: 0;
+      line-height: 1.7;
+    }
+
+    header {
+      background: #1a1f2e;
+      color: #fff;
+      padding: 32px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header img {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+    }
+    header h1 { font-size: 22px; font-weight: 800; }
+    header p { font-size: 13px; opacity: .6; margin-top: 3px; }
+
+    nav {
+      background: #fff;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 0 24px;
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+    }
+    nav a {
+      color: #1a1a2e;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 14px 16px;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+    }
+    nav a:hover { border-bottom-color: #2563eb; color: #2563eb; }
+
+    .content {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+
+    section {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .section-icon {
+      font-size: 28px;
+      width: 48px;
+      height: 48px;
+      background: #f0f4ff;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    h2 { font-size: 18px; font-weight: 700; }
+    .section-sub { font-size: 13px; opacity: .6; margin-top: 2px; }
+
+    p { font-size: 15px; margin-bottom: 12px; color: #333; }
+    p:last-child { margin-bottom: 0; }
+
+    .step {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      align-items: flex-start;
+    }
+    .step-num {
+      width: 28px;
+      height: 28px;
+      background: #2563eb;
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .step-text { font-size: 15px; color: #333; }
+
+    .tip {
+      background: #f0f4ff;
+      border-left: 4px solid #2563eb;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #1a1a2e;
+      margin: 16px 0;
+    }
+    .tip strong { color: #2563eb; }
+
+    .warning {
+      background: #fff8e1;
+      border-left: 4px solid #f59e0b;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 14px;
+      margin: 16px 0;
+    }
+
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .compare-box {
+      background: #f8f9fc;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .compare-box h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+    .compare-box ul { padding-left: 18px; }
+    .compare-box li { font-size: 13px; margin-bottom: 6px; color: #444; }
+    .compare-box.search h3 { color: #2563eb; }
+    .compare-box.ask h3 { color: #7c3aed; }
+
+    .gesture {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .gesture:last-child { border-bottom: none; }
+    .gesture-icon { font-size: 24px; width: 40px; text-align: center; flex-shrink: 0; }
+    .gesture-text h4 { font-size: 14px; font-weight: 700; }
+    .gesture-text p { font-size: 13px; color: #666; margin: 0; }
+
+    .pro-badge {
+      display: inline-block;
+      background: #2563eb;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .voice-steps {
+      background: #1a1f2e;
+      color: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 16px 0;
+    }
+    .voice-steps h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; opacity: .7; text-transform: uppercase; letter-spacing: .5px; }
+    .voice-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    .voice-step span { opacity: .5; font-size: 18px; }
+
+    footer {
+      text-align: center;
+      padding: 32px 24px;
+      font-size: 13px;
+      color: #888;
+      border-top: 1px solid #e0e0e0;
+      background: #fff;
+    }
+    footer a { color: #2563eb; text-decoration: none; }
+
+    @media (max-width: 600px) {
+      .compare { grid-template-columns: 1fr; }
+      section { padding: 20px; }
+    }
+  </style>
 </head>
 <body>
-<h1>POH Reader Help</h1>
-<p>Full help page coming soon.</p>
+
+<header>
+  <img src="apple-touch-icon-v2.png" alt="POH Reader" />
+  <div>
+    <h1>POH Reader</h1>
+    <p>Help &amp; User Guide</p>
+  </div>
+</header>
+
+<nav>
+  <a href="#getting-started">Getting Started</a>
+  <a href="#library">Library</a>
+  <a href="#search-vs-ask">Search vs Ask</a>
+  <a href="#read-aloud">Read Aloud</a>
+  <a href="#zoom">Zoom &amp; Pan</a>
+  <a href="#pro">PRO Features</a>
+</nav>
+
+<div class="content">
+
+  <!-- GETTING STARTED -->
+  <section id="getting-started">
+    <div class="section-header">
+      <div class="section-icon">📄</div>
+      <div>
+        <h2>Getting Started</h2>
+        <div class="section-sub">Upload your first manual in seconds</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">Tap the <strong>+ Upload</strong> button in the action bar at the bottom of the screen.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">Select your POH or AFM PDF from your Files app, iCloud Drive, or any connected storage.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">Wait a few seconds while the manual loads. It is saved to your device automatically.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text">Your manual opens immediately. Use <strong>◀ ▶</strong> to navigate pages, or tap 📚 to jump to a section.</div>
+    </div>
+
+    <div class="tip">
+      <strong>✈️ Tip:</strong> POH Reader works completely offline. Your manuals are stored on your device and never uploaded to any server.
+    </div>
+  </section>
+
+  <!-- LIBRARY -->
+  <section id="library">
+    <div class="section-header">
+      <div class="section-icon">📚</div>
+      <div>
+        <h2>Library</h2>
+        <div class="section-sub">Save and switch between multiple manuals</div>
+      </div>
+    </div>
+
+    <p>POH Reader can store multiple PDFs at once — your POH, MEL, supplements, or any other document.</p>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">Tap the 📚 icon in the action bar to open the Library sheet.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">Tap <strong>+ Upload new PDF</strong> to add another manual.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">Tap <strong>Open</strong> next to any saved manual to switch to it instantly.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-text">Tap <strong>Delete</strong> to remove a manual from the library.</div>
+    </div>
+
+    <div class="tip">
+      <strong>💡 Tip:</strong> The currently open manual is marked with ▶. Your last opened manual is automatically restored when you reopen the app.
+    </div>
+  </section>
+
+  <!-- SEARCH VS ASK -->
+  <section id="search-vs-ask">
+    <div class="section-header">
+      <div class="section-icon">🔍</div>
+      <div>
+        <h2>Search vs Ask</h2>
+        <div class="section-sub">Two different tools for finding information</div>
+      </div>
+    </div>
+
+    <p>POH Reader has two ways to find information. They work differently and are best for different situations:</p>
+
+    <div class="compare">
+      <div class="compare-box search">
+        <h3>🔍 Search</h3>
+        <ul>
+          <li>Finds exact text in the PDF</li>
+          <li>Best for numbers and limits</li>
+          <li>Try: "Vref", "105 KIAS", "oil pressure"</li>
+          <li>Shows page and context</li>
+          <li>Free feature</li>
+        </ul>
+      </div>
+      <div class="compare-box ask">
+        <h3>🎧 Ask <span class="pro-badge">PRO</span></h3>
+        <ul>
+          <li>Understands keywords and topics</li>
+          <li>Best for procedures and emergencies</li>
+          <li>Try: "flap fail", "engine fire", "crosswind"</li>
+          <li>Returns ranked page results with Jump buttons</li>
+          <li>Works 100% offline</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="tip">
+      <strong>✈️ Example:</strong> Looking for the maximum crosswind limit? Use <strong>Search</strong> and type "crosswind" to find the exact number. Dealing with a flap failure procedure? Use <strong>Ask</strong> and type "flap fail" to jump straight to the emergency page.
+    </div>
+
+    <div class="warning">
+      ⚠️ Always verify all information in the official POH/AFM. POH Reader is a study and reference tool. The pilot in command is solely responsible for aircraft operation.
+    </div>
+  </section>
+
+  <!-- READ ALOUD -->
+  <section id="read-aloud">
+    <div class="section-header">
+      <div class="section-icon">🎧</div>
+      <div>
+        <h2>Read Aloud <span class="pro-badge">PRO</span></h2>
+        <div class="section-sub">Listen to your manual — get the best voice</div>
+      </div>
+    </div>
+
+    <p>POH Reader uses Apple's built-in text-to-speech engine (AVSpeechSynthesizer) to read your manual aloud. For the best experience, we recommend downloading the <strong>Daniel (Enhanced)</strong> voice.</p>
+
+    <div class="voice-steps">
+      <h3>How to get Daniel Enhanced</h3>
+      <div class="voice-step"><span>1️⃣</span> Open <strong>Settings</strong> on your iPhone or iPad</div>
+      <div class="voice-step"><span>2️⃣</span> Go to <strong>Accessibility → Spoken Content → Voices</strong></div>
+      <div class="voice-step"><span>3️⃣</span> Tap <strong>English</strong></div>
+      <div class="voice-step"><span>4️⃣</span> Find <strong>Daniel</strong> and tap the download ⬇️ icon next to <strong>Enhanced</strong></div>
+      <div class="voice-step"><span>5️⃣</span> Once downloaded, POH Reader will use it automatically</div>
+    </div>
+
+    <div class="tip">
+      <strong>🎧 Controls:</strong> Tap <strong>Read page</strong> to read the current page, <strong>Read section</strong> for the whole chapter, <strong>Stop</strong> to pause, and <strong>Resume</strong> to continue where you left off. Adjust speed with the slider.
+    </div>
+
+    <p>You can also use the <strong>microphone</strong> button to ask questions by voice — hold the button, speak your question, then release. POH Reader uses native iOS speech recognition for accurate results.</p>
+  </section>
+
+  <!-- ZOOM -->
+  <section id="zoom">
+    <div class="section-header">
+      <div class="section-icon">🔎</div>
+      <div>
+        <h2>Zoom &amp; Pan</h2>
+        <div class="section-sub">Navigate performance charts and diagrams</div>
+      </div>
+    </div>
+
+    <p>POH Reader supports full pinch-to-zoom with pan, perfect for reading performance charts and weight &amp; balance diagrams.</p>
+
+    <div class="gesture">
+      <div class="gesture-icon">🤏</div>
+      <div class="gesture-text">
+        <h4>Pinch to zoom</h4>
+        <p>Place two fingers on the page and pinch in or out to zoom. The page zooms toward your fingers.</p>
+      </div>
+    </div>
+    <div class="gesture">
+      <div class="gesture-icon">👆</div>
+      <div class="gesture-text">
+        <h4>Single finger pan</h4>
+        <p>When zoomed in, drag with one finger to move around the page in any direction.</p>
+      </div>
+    </div>
+    <div class="gesture">
+      <div class="gesture-icon">📄</div>
+      <div class="gesture-text">
+        <h4>Auto-reset on page change</h4>
+        <p>Zoom resets automatically when you navigate to a new page.</p>
+      </div>
+    </div>
+
+    <div class="tip">
+      <strong>💡 Tip:</strong> Use zoom on performance charts — pinch in on the takeoff distance graph and drag to find your exact intersection point.
+    </div>
+  </section>
+
+  <!-- PRO -->
+  <section id="pro">
+    <div class="section-header">
+      <div class="section-icon">🔓</div>
+      <div>
+        <h2>PRO Features</h2>
+        <div class="section-sub">Unlock Read Aloud and Ask</div>
+      </div>
+    </div>
+
+    <p>POH Reader PRO unlocks two powerful features: <strong>Read Aloud</strong> and <strong>Ask</strong>. It is a one-time purchase — no subscription, no ads.</p>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">Tap <strong>Read page</strong> or <strong>Ask</strong> — the PRO upgrade screen appears.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">Tap <strong>Unlock PRO</strong> to purchase, or tap <strong>I already purchased</strong> if you have an unlock code.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">Enter your unlock code and tap <strong>Unlock</strong>. PRO is activated immediately.</div>
+    </div>
+
+    <div class="tip">
+      <strong>🔒 Your unlock is permanent.</strong> It is stored on your device and survives app updates. If you reinstall the app, simply enter your code again.
+    </div>
+
+    <p>To purchase POH Reader PRO, visit: <a href="https://tedonealessio-lgtm.github.io/poh-reader" target="_blank">tedonealessio-lgtm.github.io/poh-reader</a></p>
+  </section>
+
+</div>
+
+<footer>
+  <p>POH Reader · © 2025 Alessio Tedone · <a href="privacy-policy.html">Privacy Policy</a></p>
+  <p style="margin-top:8px;">Questions? <a href="mailto:tedone.alessio@gmail.com">tedone.alessio@gmail.com</a></p>
+</footer>
+
 </body>
 </html>
