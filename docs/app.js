@@ -1720,31 +1720,107 @@ if (micBtn) {
   micBtn.addEventListener("pointerleave", endHold);
 }
 
+
 // ================================
 // Pilot Subscription (paid gating)
 // ================================
 const PAID_KEY = "pohPilotPaid"; // "1" = paid, null = not paid
 
 function isPaidUser() {
-  return localStorage.getItem(PAID_KEY) === "1";
+  return localStorage.getItem(PAID_KEY) === "1" || isUnlocked;
 }
 
-// TEMP helper (for manual unlock during testing)
-// Call from console: unlockPilot()
 function unlockPilot() {
   localStorage.setItem(PAID_KEY, "1");
+  isUnlocked = true;
   console.log("Pilot subscription unlocked");
 }
 
-// TEMP helper (lock again if needed)
 function lockPilot() {
   localStorage.removeItem(PAID_KEY);
+  isUnlocked = false;
   console.log("Pilot subscription locked");
 }
 
-// Expose helpers for DevTools / testing
 window.unlockPilot = unlockPilot;
 window.lockPilot = lockPilot;
+
+// ================================
+// StoreKit IAP (cordova-plugin-purchase)
+// ================================
+const IAP_PRODUCT_ID = "com.alessiotedone.pohreader.pro";
+
+document.addEventListener("deviceready", () => {
+  if (!window.CdvPurchase) return;
+
+  const { store, ProductType, Platform } = CdvPurchase;
+
+  store.register([{
+    id: IAP_PRODUCT_ID,
+    type: ProductType.NON_CONSUMABLE,
+    platform: Platform.APPLE_APPSTORE,
+  }]);
+
+  store.when()
+    .productUpdated(() => {
+      const product = store.get(IAP_PRODUCT_ID);
+      if (product && product.offers && product.offers[0]) {
+        const price = product.offers[0].pricingPhases[0]?.price || "5,99 €";
+        document.querySelectorAll(".pwPrice, #paywallSubscribeBtn").forEach(el => {
+          if (el.id === "paywallSubscribeBtn") el.textContent = "Unlock PRO — " + price;
+          else el.textContent = price;
+        });
+      }
+    })
+    .approved(transaction => {
+      transaction.verify();
+    })
+    .verified(receipt => {
+      receipt.finish();
+      localStorage.setItem(PAID_KEY, "1");
+      isUnlocked = true;
+      window.hidePaywall?.();
+      enablePdfDependentControls(true);
+      alert("Welcome to POH Reader PRO! ✈️");
+    });
+
+  store.initialize([Platform.APPLE_APPSTORE]);
+});
+
+async function purchasePro() {
+  if (!window.CdvPurchase) {
+    alert("Store not available. Please try again.");
+    return;
+  }
+  const { store, Platform } = CdvPurchase;
+  const product = store.get(IAP_PRODUCT_ID, Platform.APPLE_APPSTORE);
+  if (!product) {
+    alert("Product not found. Check your connection and try again.");
+    return;
+  }
+  const offer = product.offers[0];
+  if (offer) store.order(offer);
+}
+
+async function restorePurchases() {
+  if (!window.CdvPurchase) {
+    alert("Store not available.");
+    return;
+  }
+  const { store } = CdvPurchase;
+  await store.restorePurchases();
+  if (isPaidUser()) {
+    window.hidePaywall?.();
+    enablePdfDependentControls(true);
+    alert("Purchase restored! ✈️");
+  } else {
+    alert("No previous purchase found.");
+  }
+}
+
+window.purchasePro = purchasePro;
+window.restorePurchases = restorePurchases;
+
 
 function showPaywall(featureName = "this feature") {
   const overlay = document.getElementById("paywallOverlay");
@@ -1752,7 +1828,7 @@ function showPaywall(featureName = "this feature") {
   const unlockRow = document.getElementById("paywallUnlockRow");
   const code = document.getElementById("paywallCode");
 
-if (msg) msg.textContent = `Unlock ${featureName} with POH Reader PRO (4,99 € one-time).`;
+if (msg) msg.textContent = `Unlock ${featureName} with POH Reader PRO (5,99 € one-time).`;
   unlockRow?.setAttribute("hidden", "");
   if (code) code.value = "";
 
@@ -1765,7 +1841,6 @@ function requirePaid(featureName) {
   return false;
 }
 
-// Paywall UI wiring
 const SUBSCRIBE_URL = "https://buy.stripe.com/5kQaEXccuguagFt6yo6AM00";
 
 (function initPaywallUI() {
@@ -1777,7 +1852,7 @@ const SUBSCRIBE_URL = "https://buy.stripe.com/5kQaEXccuguagFt6yo6AM00";
   const codeInput = document.getElementById("paywallCode");
   const unlockBtn = document.getElementById("paywallUnlockBtn");
 
-  if (subscribeBtn) subscribeBtn.href = SUBSCRIBE_URL;
+  if (subscribeBtn) { subscribeBtn.removeAttribute("href"); subscribeBtn.addEventListener("click", (e) => { e.preventDefault(); purchasePro(); }); }
 
   function hidePaywall() {
     overlay?.setAttribute("hidden", "");
@@ -1825,8 +1900,7 @@ overlay?.addEventListener("click", (e) => {
 
   // Reveal unlock only when requested
   alreadyBtn?.addEventListener("click", () => {
-    unlockRow?.removeAttribute("hidden");
-    setTimeout(() => codeInput?.focus(), 50);
+    restorePurchases();
   });
 
   // iPhone keyboard: keep input visible
