@@ -2570,10 +2570,19 @@ mabUpload?.addEventListener("click", (e) => {
     });
   }
 
-  // Poll for sections to appear (after PDF loads)
+  // Poll for sections to appear/update (after PDF loads or switched)
+  let _lastSyncedSectionCount = -1;
+  let _lastSyncedFirstTitle = "";
   setInterval(() => {
-    if (sectionRanges.length > 0 && sectionsListSheet && sectionsListSheet.children.length === 0) {
+    if (!sectionsListSheet) return;
+    const firstTitle = sectionRanges[0]?.title || "";
+    const changed =
+      sectionRanges.length !== _lastSyncedSectionCount ||
+      firstTitle !== _lastSyncedFirstTitle;
+    if (changed) {
       syncSectionsToSheet();
+      _lastSyncedSectionCount = sectionRanges.length;
+      _lastSyncedFirstTitle = firstTitle;
     }
   }, 800);
 
