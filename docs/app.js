@@ -1825,13 +1825,7 @@ window.restorePurchases = restorePurchases;
 function showPaywall(featureName = "this feature") {
   const overlay = document.getElementById("paywallOverlay");
   const msg = document.getElementById("paywallMsg");
-  const unlockRow = document.getElementById("paywallUnlockRow");
-  const code = document.getElementById("paywallCode");
-
 if (msg) msg.textContent = `Unlock ${featureName} with POH Reader PRO (5,99 € one-time).`;
-  unlockRow?.setAttribute("hidden", "");
-  if (code) code.value = "";
-
   overlay?.removeAttribute("hidden");
 }
 
@@ -1848,43 +1842,14 @@ const SUBSCRIBE_URL = "https://buy.stripe.com/5kQaEXccuguagFt6yo6AM00";
   const closeBtn = document.getElementById("paywallClose");
   const subscribeBtn = document.getElementById("paywallSubscribeBtn");
   const alreadyBtn = document.getElementById("paywallAlreadyBtn");
-  const unlockRow = document.getElementById("paywallUnlockRow");
-  const codeInput = document.getElementById("paywallCode");
-  const unlockBtn = document.getElementById("paywallUnlockBtn");
 
   if (subscribeBtn) { subscribeBtn.removeAttribute("href"); subscribeBtn.addEventListener("click", (e) => { e.preventDefault(); purchasePro(); }); }
 
   function hidePaywall() {
     overlay?.setAttribute("hidden", "");
-    unlockRow?.setAttribute("hidden", "");
-    if (codeInput) codeInput.value = "";
   }
 
-  unlockBtn?.addEventListener("click", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
 
-  const raw = (codeInput?.value || "").trim();
-  const code = raw.toUpperCase();
-
-  const VALID_CODES = new Set(["POH-PILOT-2025", "POH-BETA-001", "POH-BETA-002", "POH-BETA-003"]);
-  if (!VALID_CODES.has(code)) {
-    alert("Invalid code. Please check the code you received after purchasing.");
-    return;
-  }
-
-  // ✅ THIS is what makes it persist
-  localStorage.setItem(PAID_KEY, "1");
-
-  // ✅ close + refresh UI
-  hidePaywall();
-  enablePdfDependentControls(true);
-
-  // extra safety for iOS tap weirdness
-  setTimeout(() => {
-    overlay?.setAttribute("hidden", "");
-  }, 0);
-});
 
   closeBtn?.addEventListener("click", hidePaywall);
 closeBtn?.addEventListener("pointerup", hidePaywall);
@@ -1903,10 +1868,7 @@ overlay?.addEventListener("click", (e) => {
     restorePurchases();
   });
 
-  // iPhone keyboard: keep input visible
-  codeInput?.addEventListener("focus", () => {
-    setTimeout(() => codeInput.scrollIntoView({ block: "center", behavior: "smooth" }), 250);
-  });
+
 
   window.hidePaywall = hidePaywall;
 })();
