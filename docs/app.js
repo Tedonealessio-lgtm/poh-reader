@@ -1777,11 +1777,18 @@ document.addEventListener("deviceready", () => {
     })
     .verified(receipt => {
       receipt.finish();
+      const owned = receipt.collection && receipt.collection.some(t =>
+        t.products && t.products.some(p => p.id === IAP_PRODUCT_ID)
+      );
+      if (!owned) return;
+      const alreadyUnlocked = localStorage.getItem(PAID_KEY) === "1";
       localStorage.setItem(PAID_KEY, "1");
       isUnlocked = true;
-      window.hidePaywall?.();
       enablePdfDependentControls(true);
-      alert("Welcome to POH Reader PRO! ✈️");
+      if (!alreadyUnlocked) {
+        window.hidePaywall?.();
+        alert("Welcome to POH Reader PRO! ✈️");
+      }
     });
 
   store.initialize([Platform.APPLE_APPSTORE]);
