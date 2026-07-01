@@ -64,6 +64,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  touch-action: manipulation;
 }
 
 .hiddenFile {
@@ -486,6 +487,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   }
 
   .sheetContent {
+    touch-action: pan-y;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 14px 16px;

@@ -812,6 +812,62 @@ async function runLocalAskIncremental(question, { timeBudgetMs = 1200, maxReturn
   return { hits: final, done };
 }
 
+
+// ================================
+// AI-Powered Ask (Claude API via secure backend)
+// ================================
+const AI_BACKEND_URL = "https://poh-reader-api.poh-reader.workers.dev";
+
+async function askAI(question, hits) {
+  const pages = [];
+  for (const h of hits.slice(0, 5)) {
+    const text = await getPageText(h.page);
+    if (text) pages.push({ page: h.page, text: text.slice(0, 2000) });
+  }
+  const response = await fetch(AI_BACKEND_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "ask", question, pages }),
+  });
+  if (!response.ok) throw new Error("AI request failed");
+  const data = await response.json();
+  return data.result;
+}
+
+async function handleAskAI() {
+  if (!requirePaid("Ask")) return;
+  const q = (questionEl?.value || "").trim();
+  if (!q) return;
+  if (!pdfDoc) {
+    if (answerEl) answerEl.textContent = "Load a PDF first.";
+    return;
+  }
+  if (answerEl) answerEl.innerHTML = `<div style="opacity:.85;">Thinking…</div>`;
+  renderBestPlaces([]);
+
+  const { hits } = await runLocalAskIncremental(q, { timeBudgetMs: 1200, maxReturn: 7 });
+  if (!hits.length) {
+    if (answerEl) {
+      answerEl.innerHTML =
+        `<div style="font-weight:700;">No strong matches found.</div>
+         <div style="opacity:.8;margin-top:8px;">Try different keywords.</div>`;
+    }
+    return;
+  }
+  renderBestPlaces(hits);
+
+  try {
+    const aiAnswer = await askAI(q, hits);
+    if (answerEl) {
+      const formatted = escapeHtml(aiAnswer).replace(/\n/g, "<br>");
+      answerEl.innerHTML = `<div style="line-height:1.5;">${formatted}</div>`;
+    }
+  } catch (err) {
+    console.error("AI Ask failed, falling back to offline:", err);
+    await handleAsk();
+  }
+}
+
 async function handleAsk() {
   if (!requirePaid("Ask")) return;
   const q = (questionEl?.value || "").trim();
@@ -1663,7 +1719,13 @@ searchInput?.addEventListener("keydown", async (e) => {
   }
 });
 
-askBtn?.addEventListener("click", handleAsk);
+askBtn?.addEventListener("click", () => {
+  if (navigator.onLine) {
+    handleAskAI();
+  } else {
+    handleAsk();
+  }
+});
 
 readPageBtn?.addEventListener("click", () => {
   if (!requirePaid("Read aloud")) return;
@@ -1765,7 +1827,7 @@ document.addEventListener("deviceready", () => {
     .productUpdated(() => {
       const product = store.get(IAP_PRODUCT_ID);
       if (product && product.offers && product.offers[0]) {
-        const price = product.offers[0].pricingPhases[0]?.price || "5,99 €";
+        const price = product.offers[0].pricingPhases[0]?.price || "9,99 €";
         document.querySelectorAll(".pwPrice, #paywallSubscribeBtn").forEach(el => {
           if (el.id === "paywallSubscribeBtn") el.textContent = "Unlock PRO — " + price;
           else el.textContent = price;
@@ -1832,7 +1894,7 @@ window.restorePurchases = restorePurchases;
 function showPaywall(featureName = "this feature") {
   const overlay = document.getElementById("paywallOverlay");
   const msg = document.getElementById("paywallMsg");
-if (msg) msg.textContent = `Unlock ${featureName} with POH Reader PRO (5,99 € one-time).`;
+if (msg) msg.textContent = `Unlock ${featureName} with POH Reader PRO (9,99 € one-time).`;
   overlay?.removeAttribute("hidden");
 }
 
@@ -2457,7 +2519,7 @@ mabUpload?.addEventListener("click", (e) => {
     if (!requirePaid("Ask")) return;
     const q = (questionSheet?.value || "").trim();
     if (!q || !pdfDoc) return;
-    if (answerSheet) answerSheet.innerHTML = `<div style="opacity:.85;">Searching…</div>`;
+    if (answerSheet) answerSheet.innerHTML = `<div style="opacity:.85;">Thinking…</div>`;
     if (bestPlacesWrapSheet) bestPlacesWrapSheet.style.display = "none";
     const { hits, done } = await runLocalAskIncremental(q, { timeBudgetMs: 1200, maxReturn: 7 });
     if (!hits.length) {
@@ -2475,6 +2537,18 @@ mabUpload?.addEventListener("click", (e) => {
             <button class="bestPlaceBtn" onclick="window.readPageBtnSheet_click(${h.page})">Read</button>
           </div>
         </div>`).join("");
+    }
+    if (navigator.onLine) {
+      try {
+        const aiAnswer = await askAI(q, hits);
+        if (answerSheet) {
+          const formatted = escapeHtml(aiAnswer).replace(/\n/g, "<br>");
+          answerSheet.innerHTML = `<div style="line-height:1.5;">${formatted}</div>`;
+        }
+        return;
+      } catch (err) {
+        console.error("AI Ask (sheet) failed, falling back to offline:", err);
+      }
     }
     if (answerSheet) answerSheet.innerHTML = done ? "" : `<button id="askMoreBtnSheet">Search more</button>`;
     document.getElementById("askMoreBtnSheet")?.addEventListener("click", () => askBtnSheet?.click());
@@ -2501,6 +2575,42 @@ mabUpload?.addEventListener("click", (e) => {
     refreshResumeBtn();
   });
   document.getElementById("resumeReadBtnSheet")?.addEventListener("click", resumeTts);
+  document.getElementById("translateBtnSheet")?.addEventListener("click", async () => {
+    if (!requirePaid("Translate")) return;
+    const output = document.getElementById("translateOutputSheet");
+    const langSelect = document.getElementById("translateLangSheet");
+    const lang = langSelect ? langSelect.value : "German";
+    if (!pdfDoc) {
+      if (output) output.innerHTML = "<div style=\"opacity:.85;\">Load a PDF first.</div>";
+      return;
+    }
+    if (!navigator.onLine) {
+      if (output) output.innerHTML = "<div style=\"opacity:.85;\">Translation requires an internet connection.</div>";
+      return;
+    }
+    if (output) output.innerHTML = "<div style=\"opacity:.85;\">Translating page " + pageNum + "…</div>";
+    try {
+      const text = await getPageText(pageNum);
+      if (!text) {
+        if (output) output.innerHTML = "<div style=\"opacity:.85;\">No readable text on this page.</div>";
+        return;
+      }
+      const response = await fetch(AI_BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "translate", targetLanguage: lang, pageText: text.slice(0, 4000) }),
+      });
+      if (!response.ok) throw new Error("Translation request failed");
+      const data = await response.json();
+      if (output) {
+        const formatted = escapeHtml(data.result || "").replace(/\n/g, "<br>");
+        output.innerHTML = "<div style=\"line-height:1.5;\">" + formatted + "</div>";
+      }
+    } catch (err) {
+      console.error("Translate failed:", err);
+      if (output) output.innerHTML = "<div style=\"opacity:.85;\">Translation failed. Check your connection and try again.</div>";
+    }
+  });
 
   // Speed sheet sync
   const speedRangeSheet = document.getElementById("speedRangeSheet");
