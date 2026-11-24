@@ -228,11 +228,13 @@ function setPageInfo() {
 }
 
 function updateResumeBtnState() {
-  if (!resumeReadBtn) return;
-  resumeReadBtn.disabled = !(
+  const canResumeNow = !!(
     lastReadProgress &&
     (lastReadProgress.offset || 0) > 0
   );
+  if (resumeReadBtn) resumeReadBtn.disabled = !canResumeNow;
+  const resumeReadBtnSheet = document.getElementById("resumeReadBtnSheet");
+  if (resumeReadBtnSheet) resumeReadBtnSheet.disabled = !canResumeNow;
 }
 
 function refreshResumeBtn() {
@@ -273,6 +275,16 @@ function escapeHtml(s) {
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
+}
+function formatAIText(s) {
+  let t = escapeHtml(s || "");
+  t = t.replace(/^###\s+(.+)$/gm, "<div style='font-weight:700;margin:10px 0 4px;'>$1</div>");
+  t = t.replace(/^##\s+(.+)$/gm, "<div style='font-weight:700;font-size:1.05em;margin:12px 0 4px;'>$1</div>");
+  t = t.replace(/^#\s+(.+)$/gm, "<div style='font-weight:800;font-size:1.1em;margin:12px 0 6px;'>$1</div>");
+  t = t.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+  t = t.replace(/\*([^*\n]+)\*/g, "<i>$1</i>");
+  t = t.replace(/\n/g, "<br>");
+  return t;
 }
 
 // =====================================================
@@ -584,7 +596,19 @@ async function runSearch(query) {
   if (!searchResults) return;
 
   if (!hits.length) {
-    searchResults.innerHTML = `<div style="opacity:.7;font-size:12px;">No hits found.</div>`;
+    searchResults.innerHTML = `
+      <div style="opacity:.7;font-size:12px;">No exact matches for "${escapeHtml(q)}".</div>
+      <div style="opacity:.85;font-size:12px;margin-top:8px;">Ask (PRO) understands natural language and can often find this even with different wording.</div>
+      <button id="tryAskFromSearch" style="width:100%;margin-top:8px;">Try Ask →</button>
+    `;
+    const tryAskBtn = document.getElementById("tryAskFromSearch");
+    if (tryAskBtn) {
+      tryAskBtn.addEventListener("click", () => {
+        if (questionEl) questionEl.value = q;
+        questionEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+        handleAskAI();
+      });
+    }
     return;
   }
 
@@ -859,7 +883,7 @@ async function handleAskAI() {
   try {
     const aiAnswer = await askAI(q, hits);
     if (answerEl) {
-      const formatted = escapeHtml(aiAnswer).replace(/\n/g, "<br>");
+      const formatted = formatAIText(aiAnswer);
       answerEl.innerHTML = `<div style="line-height:1.5;">${formatted}</div>`;
     }
   } catch (err) {
@@ -1839,10 +1863,12 @@ document.addEventListener("deviceready", () => {
     })
     .verified(receipt => {
       receipt.finish();
-      const owned = receipt.collection && receipt.collection.some(t =>
-        t.products && t.products.some(p => p.id === IAP_PRODUCT_ID)
-      );
-      if (!owned) return;
+      const product = store.get(IAP_PRODUCT_ID);
+      console.log("[IAP] verified fired. owned:", product && product.owned);
+      if (!product || !product.owned) {
+        console.log("[IAP] Product not owned - skipping unlock.");
+        return;
+      }
       const alreadyUnlocked = localStorage.getItem(PAID_KEY) === "1";
       localStorage.setItem(PAID_KEY, "1");
       isUnlocked = true;
@@ -1878,6 +1904,10 @@ async function restorePurchases() {
   }
   const { store } = CdvPurchase;
   await store.restorePurchases();
+  for (let i = 0; i < 12; i++) {
+    if (isPaidUser()) break;
+    await new Promise(r => setTimeout(r, 500));
+  }
   if (isPaidUser()) {
     window.hidePaywall?.();
     enablePdfDependentControls(true);
@@ -1894,7 +1924,7 @@ window.restorePurchases = restorePurchases;
 function showPaywall(featureName = "this feature") {
   const overlay = document.getElementById("paywallOverlay");
   const msg = document.getElementById("paywallMsg");
-if (msg) msg.textContent = `Unlock ${featureName} with POH Reader PRO (9,99 € one-time).`;
+if (msg) msg.textContent = `Unlock ${featureName} with POH Reader PRO.`;
   overlay?.removeAttribute("hidden");
 }
 
@@ -2049,7 +2079,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   // ================================
 // Welcome overlay (first run)
 // ================================
-const WELCOME_KEY = "pohWelcomeSeen";
+const WELCOME_KEY = "pohWelcomeSeen2";
  
 function hideWelcome() {
   document.getElementById("welcomeOverlay")?.setAttribute("hidden", "");
@@ -2412,12 +2442,14 @@ mabUpload?.addEventListener("click", (e) => {
 
   [librarySheet, searchSheet, askSheet].forEach(sheet => {
     if (!sheet) return;
+    const handle = sheet.querySelector(".sheetHandle");
+    if (!handle) return;
 
-    sheet.addEventListener("touchstart", (e) => {
+    handle.addEventListener("touchstart", (e) => {
       touchStartY = e.touches[0].clientY;
     }, { passive: true });
 
-    sheet.addEventListener("touchmove", (e) => {
+    handle.addEventListener("touchmove", (e) => {
       const dy = e.touches[0].clientY - touchStartY;
       if (dy > 60) closeAll();
     }, { passive: true });
@@ -2491,7 +2523,19 @@ mabUpload?.addEventListener("click", (e) => {
       if (p % 12 === 0) await sleep(0);
     }
     if (!searchResultsSheet) return;
-    if (!hits.length) { searchResultsSheet.innerHTML = `<div style="opacity:.7;font-size:12px;">No hits found.</div>`; return; }
+    if (!hits.length) {
+      searchResultsSheet.innerHTML = `
+        <div style="opacity:.7;font-size:12px;">No exact matches for "${escapeHtml(q)}".</div>
+        <div style="opacity:.85;font-size:12px;margin-top:8px;">Ask (PRO) understands natural language and can often find this even with different wording.</div>
+        <button id="tryAskFromSearchSheet" style="width:100%;margin-top:8px;">Try Ask →</button>
+      `;
+      document.getElementById("tryAskFromSearchSheet")?.addEventListener("click", () => {
+        if (questionSheet) questionSheet.value = q;
+        openSheet(askSheet);
+        askBtnSheet?.click();
+      });
+      return;
+    }
     const wrap = document.createElement("div");
     for (const h of hits) {
       const item = document.createElement("div");
@@ -2542,7 +2586,7 @@ mabUpload?.addEventListener("click", (e) => {
       try {
         const aiAnswer = await askAI(q, hits);
         if (answerSheet) {
-          const formatted = escapeHtml(aiAnswer).replace(/\n/g, "<br>");
+          const formatted = formatAIText(aiAnswer);
           answerSheet.innerHTML = `<div style="line-height:1.5;">${formatted}</div>`;
         }
         return;
@@ -2603,7 +2647,7 @@ mabUpload?.addEventListener("click", (e) => {
       if (!response.ok) throw new Error("Translation request failed");
       const data = await response.json();
       if (output) {
-        const formatted = escapeHtml(data.result || "").replace(/\n/g, "<br>");
+        const formatted = formatAIText(data.result || "");
         output.innerHTML = "<div style=\"line-height:1.5;\">" + formatted + "</div>";
       }
     } catch (err) {
