@@ -2131,71 +2131,10 @@ function hideWelcome() {
   setMicStatus("Mic ready. Hold to talk.");
   refreshResumeBtn();
 
-// Theme toggle (Auto / Light / Dark)
-const THEME_KEY = "pohTheme"; // store: "auto" | "light" | "dark"
+// Theme: follows the iPhone/iPad light-dark setting via CSS (prefers-color-scheme). Toggle removed in 1.1.5.
 const root = document.documentElement;
-const themeBtn = document.getElementById("themeToggle");
-
-function getSystemTheme() {
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-}
-
-function getSavedTheme() {
-  const v = localStorage.getItem(THEME_KEY);
-  return (v === "auto" || v === "light" || v === "dark") ? v : "auto";
-}
-
-function applyTheme(mode) {
-  // mode: "auto" | "light" | "dark"
-  const effective = (mode === "auto") ? getSystemTheme() : mode;
-
-  if (effective === "dark") root.setAttribute("data-theme", "dark");
-  else root.removeAttribute("data-theme"); // light default
-
-  localStorage.setItem(THEME_KEY, mode);
-  updateThemeIcon(mode, effective);
-}
-
-function updateThemeIcon(mode, effective) {
-  if (!themeBtn) return;
-
-  // Icon shows effective theme, but we also hint mode
-  const icon = (effective === "dark") ? "🌙" : "☀️";
-
-  // If you want super clean: only icon
-  themeBtn.textContent = icon;
-
-  // Optional: tooltip explains state
-  themeBtn.title = `Theme: ${mode.toUpperCase()} (${effective})`;
-  themeBtn.setAttribute("aria-label", `Theme ${mode}, currently ${effective}`);
-}
-
-function nextMode(mode) {
-  // cycle: auto -> light -> dark -> auto
-  if (mode === "auto") return "light";
-  if (mode === "light") return "dark";
-  return "auto";
-}
-
-function initTheme() {
-  // 1) apply saved mode
-  applyTheme(getSavedTheme());
-
-  // 2) react to system changes ONLY if mode is auto
-  const media = window.matchMedia("(prefers-color-scheme: light)");
-  media.addEventListener?.("change", () => {
-    if (getSavedTheme() !== "auto") return;
-    applyTheme("auto");
-  });
-
-  // 3) user toggle cycles modes
-  themeBtn?.addEventListener("click", () => {
-    const mode = getSavedTheme();
-    applyTheme(nextMode(mode));
-  });
-}
-
-initTheme();
+document.documentElement.removeAttribute("data-theme");
+try { localStorage.removeItem("pohTheme"); } catch (_) {}
 
 // Debug helpers
 window.__POH = window.__POH || {};
