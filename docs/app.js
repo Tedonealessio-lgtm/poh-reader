@@ -1420,6 +1420,26 @@ function stopListening() {
 // =====================================================
 // PDF Loading (robust + iOS friendly)
 // =====================================================
+// POH Reader 1.1.5 · Systems: detect PC-12 NGX (02406) / NG (02277) from the report number in the page footers
+async function pohSystemsDetect(doc) {
+  try {
+    if (!window.POHSystems) return;
+    POHSystems.clearManual();
+    const n = doc.numPages || 0;
+    const pages = [2, 3, 4, 5, 6, 10, 20, 40].filter((p) => p <= n);
+    const texts = [];
+    for (const p of pages) {
+      if (doc !== pdfDoc) return; // another manual was opened meanwhile
+      const pg = await doc.getPage(p);
+      const tc = await pg.getTextContent();
+      texts.push((tc.items || []).map((it) => it.str || "").join(" "));
+    }
+    if (doc === pdfDoc) POHSystems.setManual(texts);
+  } catch (e) {
+    console.warn("Systems detect failed", e);
+  }
+}
+
 async function loadPdfFromBytes(bytes) {
   const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
 
@@ -1429,6 +1449,7 @@ async function loadPdfFromBytes(bytes) {
   });
 
   pdfDoc = await task.promise;
+  pohSystemsDetect(pdfDoc);
 
   pageCount = pdfDoc.numPages;
   pageNum = 1;
@@ -1932,6 +1953,11 @@ function requirePaid(featureName) {
   if (isPaidUser()) return true;
   showPaywall(featureName);
   return false;
+}
+
+// POH Reader 1.1.5 · Systems: PRO gate
+if (window.POHSystems) {
+  POHSystems.configure({ isPro: () => isPaidUser(), showPaywall: () => requirePaid("Systems") });
 }
 
 const SUBSCRIBE_URL = "https://buy.stripe.com/5kQaEXccuguagFt6yo6AM00";

@@ -1,0 +1,708 @@
+<title>PC-12 NGX Electrical</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  if (q.has("app")) document.documentElement.classList.add("in-app");
+  if (q.get("v") === "ng") document.addEventListener("DOMContentLoaded", function () {
+    var w = document.querySelector(".wrap"); if (!w) return;
+    var d = document.createElement("p"); d.className = "ng-note";
+    d.innerHTML = "<b>PC-12 NG (Report 02277).</b> Same buses, switches and load shedding as this model, which is built from the NGX POH (02406). One NG difference not shown: in a dual generator failure the Secondary Power Line keeps Hyd Pwr (landing gear hydraulics).";
+    w.insertBefore(d, w.firstChild);
+  });
+})();
+</script>
+<style>
+@font-face { font-family: "Barlow Condensed"; font-weight: 500; font-style: normal; font-display: swap; src: url("fonts/barlow-condensed-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 600; font-style: normal; font-display: swap; src: url("fonts/barlow-condensed-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; font-style: normal; font-display: swap; src: url("fonts/barlow-condensed-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 500; font-style: normal; font-display: swap; src: url("fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 600; font-style: normal; font-display: swap; src: url("fonts/ibm-plex-mono-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 400; font-style: normal; font-display: swap; src: url("fonts/ibm-plex-sans-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 500; font-style: normal; font-display: swap; src: url("fonts/ibm-plex-sans-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-weight: 600; font-style: normal; font-display: swap; src: url("fonts/ibm-plex-sans-latin-600-normal.woff2") format("woff2"); }
+
+/* POH Reader in-app mode (?app=1) */
+.in-app header { display: none; }
+.in-app .wrap { padding-top: 12px; }
+.ng-note { margin: 0 0 12px; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--rule); border-left: 3px solid var(--accent, #2F6FB0); background: var(--panel); font-size: 14px; line-height: 1.45; }
+
+/* Layout: cockpit first. The overhead EPM panel (laid out as Fig. 7-13-1) is the hero and drives
+   everything; the CAS, the MFD ELECTRICAL window and the synoptic sit beside or under it.
+   Page chrome follows the viewer's theme; the cockpit pieces stay dark, as in the aircraft. */
+:root {
+  --bg: #E7EAED; --panel: #F6F7F8; --panel-2: #EEF1F3; --ink: #1A2026; --muted: #5B6570;
+  --rule: #CDD3D9; --accent: #2A5B84; --bat-fill: #F8EBCF; --bat: #B9790C;
+  /* cockpit palette (same in both themes) */
+  --ovh: #2B3036; --ovh-2: #353B42; --ovh-edge: #1B1F23; --ovh-ink: #F1F3F4; --ovh-line: #C9CED3;
+  --ind-blue: #3FC3F0; --ind-green: #4BE37F; --ind-red: #FF4B3E; --guard: #D6332A;
+  --syn: #07090B; --syn-2: #10151A; --syn-off: #3A434B; --syn-ink: #E9EEF2; --syn-mute: #7D8994;
+  --pw-gen: #3BE08C; --pw-bat: #FFB238; --pw-eps: #FF6A4D;
+  --cas-amber: #FFB238; --cas-red: #FF4B3E;
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #101418; --panel: #182026; --panel-2: #1E262D; --ink: #E3E8EC; --muted: #8D98A2; --rule: #2C353D; --accent: #86B7E2; --bat-fill: #3A2D12; --bat: #F0A830; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #101418; --panel: #182026; --panel-2: #1E262D; --ink: #E3E8EC; --muted: #8D98A2; --rule: #2C353D; --accent: #86B7E2; --bat-fill: #3A2D12; --bat: #F0A830; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 40px; display: flex; flex-direction: column; gap: 14px; }
+header { display: flex; flex-direction: column; gap: 2px; }
+.eyebrow { font: 600 13px var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 clamp(28px, 6vw, 40px)/1.05 var(--font-display); margin: 0; letter-spacing: .01em; }
+.sub { color: var(--muted); margin: 4px 0 0; max-width: 64ch; }
+.scen-wrap { overflow-x: auto; margin-inline: -4px; padding: 2px 4px 6px; }
+.scen { display: flex; gap: 8px; width: max-content; }
+.chip { font: 600 14px/1 var(--font-display); letter-spacing: .06em; text-transform: uppercase; padding: 10px 14px; border-radius: 6px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); cursor: pointer; white-space: nowrap; }
+.chip:hover { border-color: var(--accent); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; min-width: 0; }
+.card h2, .dark h2 { font: 700 15px/1.2 var(--font-display); letter-spacing: .1em; text-transform: uppercase; margin: 0 0 10px; color: var(--muted); }
+svg { display: block; width: 100%; height: auto; }
+
+/* Overhead */
+.ovh-card { background: var(--ovh-edge); border-radius: 12px; padding: 8px; }
+.ovh-scroll { overflow-x: auto; }
+
+.ovh-hint { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: #AEB6BD; padding: 6px 6px 0; }
+.ovh-hint b { color: var(--ovh-ink); font-weight: 600; }
+.o-panel { fill: var(--ovh); stroke: #12161A; stroke-width: 2; }
+.o-div { stroke: #12161A; stroke-width: 2; }
+.o-title { font: 700 11.5px var(--font-display); letter-spacing: .06em; fill: var(--ovh-ink); }
+.o-lab { font: 700 9.5px var(--font-display); letter-spacing: .05em; fill: var(--ovh-ink); }
+.o-pos { font: 700 8.5px var(--font-display); letter-spacing: .05em; fill: #C8CDD2; }
+.o-mimic { stroke: var(--ovh-line); stroke-width: 1.6; fill: none; }
+.o-mimic.dash { stroke-dasharray: 6 5; }
+.o-screw { fill: #1E2226; stroke: #4A5158; stroke-width: 1; }
+.sw { cursor: pointer; }
+.sw .base { fill: #15191C; stroke: #8E979F; stroke-width: 1.2; }
+.sw .nut { fill: #A9B1B8; }
+.sw .lever { fill: url(#leverGrad); stroke: #3A4047; stroke-width: .8; transition: transform .12s ease-out; }
+.sw .tip { fill: #E8EBEE; stroke: #3A4047; stroke-width: .8; transition: transform .12s ease-out; }
+.sw .pullring { fill: none; stroke: var(--ind-blue); stroke-width: 2; opacity: 0; }
+.sw.pulled .pullring { opacity: 1; }
+.sw .hit { fill: transparent; }
+.ind { font: 700 9.5px var(--font-display); letter-spacing: .06em; }
+.ind.off { fill: #474E55; }
+.ind.blue { fill: var(--ind-blue); filter: url(#glow); }
+.ind.green { fill: var(--ind-green); filter: url(#glow); }
+.ind.red { fill: var(--ind-red); filter: url(#glow); }
+.cb { cursor: pointer; }
+.cb .ring { fill: #15191C; stroke: #8E979F; stroke-width: 1.2; }
+.cb .cap { fill: #2E3338; stroke: #C9CED3; stroke-width: 1.2; }
+.cb .collar { fill: #F1F3F4; opacity: 0; }
+.cb.pulled .collar { opacity: 1; }
+.cb .val { font: 700 8px var(--font-display); fill: var(--ovh-ink); }
+.mp-box { fill: var(--guard); stroke: #7A1A14; stroke-width: 1.2; }
+.mp-guard { fill: rgba(255,255,255,.14); stroke: #F7D6D3; stroke-width: 1.4; }
+.eps-box { fill: none; stroke: #D9DDE1; stroke-width: 1.4; stroke-dasharray: 6 4; }
+
+/* Layout */
+.main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (min-width: 760px) { .main { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); } }
+.col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (max-width: 759px) { .main { display: flex; flex-direction: column; } .col { display: contents; } .o1{order:1}.o2{order:2}.o3{order:3}.o4{order:4}.o5{order:5}.o6{order:6}.o7{order:7} }
+
+/* Dark cockpit cards */
+.dark { background: var(--syn); border: 1px solid #000; border-radius: 10px; padding: 12px; color: var(--syn-ink); }
+.dark h2 { color: #7C8791; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.dark h2 small { font: 500 11px var(--font-mono); letter-spacing: 0; text-transform: none; color: #6C7782; }
+.cas ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; min-height: 22px; }
+.cas li { font: 600 15px/1.35 var(--font-mono); letter-spacing: .03em; }
+.cas .w { color: var(--cas-red); } .cas .c { color: var(--cas-amber); } .cas .n { color: #6E7A84; font-weight: 500; }
+
+/* Synoptic */
+.syn-bg { fill: var(--syn); }
+.wire { fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.wire.s-gen { stroke: var(--pw-gen); } .wire.s-bat { stroke: var(--pw-bat); } .wire.s-eps { stroke: var(--pw-eps); }
+.wire.s-off { stroke: var(--syn-off); stroke-dasharray: 3 4; }
+.wire.flow { stroke-dasharray: 9 5; animation: flow 1.1s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -28; } }
+.bar { transition: fill .25s; }
+.bar.s-gen { fill: var(--pw-gen); } .bar.s-bat { fill: var(--pw-bat); } .bar.s-eps { fill: var(--pw-eps); } .bar.s-off { fill: var(--syn-off); }
+.node { cursor: pointer; }
+.node .box { fill: var(--syn-2); stroke-width: 1.4; }
+.node.s-gen .box { stroke: var(--pw-gen); } .node.s-bat .box { stroke: var(--pw-bat); } .node.s-eps .box { stroke: var(--pw-eps); }
+.node.s-off .box { stroke: var(--syn-off); stroke-dasharray: 3 2; }
+.node.sel .box { stroke: #FFFFFF; stroke-width: 2.2; stroke-dasharray: none; }
+.node:focus { outline: none; } .node:focus-visible .box { stroke: #FFFFFF; stroke-width: 2.4; }
+.bl { font: 700 10.5px var(--font-display); letter-spacing: .06em; fill: var(--syn-ink); }
+.node.s-off .bl { fill: var(--syn-mute); }
+.bs { font: 600 7.6px var(--font-mono); fill: var(--syn-mute); }
+.node.s-gen .bs { fill: var(--pw-gen); } .node.s-bat .bs { fill: var(--pw-bat); } .node.s-eps .bs { fill: var(--pw-eps); }
+.ll { font: 700 9.3px var(--font-display); letter-spacing: .04em; fill: var(--syn-ink); }
+.node.s-off .ll { fill: var(--syn-mute); text-decoration: line-through; }
+.node.s-gen.load .box { fill: rgba(59,224,140,.12); } .node.s-bat.load .box { fill: rgba(255,178,56,.12); }
+.lab { font: 600 8.5px var(--font-display); letter-spacing: .1em; fill: var(--syn-mute); }
+.src-t { font: 700 10px var(--font-display); letter-spacing: .04em; fill: var(--syn-ink); }
+.term { fill: var(--syn); stroke: var(--syn-mute); stroke-width: 1.2; }
+.cbout { font: 700 8px var(--font-mono); fill: var(--pw-eps); }
+.hit { fill: transparent; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 4px 0; font-size: 12.5px; color: #9AA5AF; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 18px; height: 4px; border-radius: 2px; display: inline-block; }
+
+/* MFD electrical window */
+.elec { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #222A31; border-radius: 6px; }
+.elec > div { padding: 8px 10px; }
+.elec > div:nth-child(odd) { border-right: 1px solid #2D363E; }
+.elec > div:nth-child(-n+2) { border-bottom: 1px solid #2D363E; }
+.elec .t { font: 700 12px var(--font-display); letter-spacing: .08em; color: #9AA5AF; }
+.elec .v { font: 600 20px/1.2 var(--font-mono); font-variant-numeric: tabular-nums; color: #FFFFFF; }
+.elec .v small { font-size: 12px; color: #8A96A0; margin-left: 4px; }
+.elec .v.lo { color: var(--cas-amber); }
+.elec .note { grid-column: 1 / -1; }
+.ind-note { font-size: 11.5px; color: #6C7782; margin-top: 6px; }
+
+/* What + failures + detail */
+.what p { margin: 0 0 10px; max-width: 65ch; }
+.diff { display: grid; grid-template-columns: max-content minmax(0,1fr); gap: 6px 12px; font-size: 14px; }
+.diff dt { font: 700 12px/1.6 var(--font-display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.diff dd { margin: 0; }
+.refs { margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+.refs b { font-family: var(--font-mono); font-weight: 600; color: var(--ink); }
+.qrh { border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; margin-top: 8px; font-size: 13.5px; }
+.qrh b { font-family: var(--font-display); letter-spacing: .06em; }
+.fails { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.fbtn { font: 600 12.5px var(--font-mono); padding: 9px 8px; border-radius: 6px; cursor: pointer; border: 1px solid var(--rule); background: var(--panel-2); color: var(--ink); text-align: left; }
+.fbtn[aria-pressed="true"] { border-color: #D6332A; color: #D6332A; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 10px 0 0; }
+.detail h3 { font: 700 22px/1.1 var(--font-display); margin: 0 0 6px; }
+.pill { display: inline-block; font: 600 11.5px var(--font-mono); padding: 2px 8px; border-radius: 99px; margin-bottom: 8px; border: 1px solid var(--rule); }
+.detail p { margin: 0 0 8px; max-width: 65ch; }
+.detail .hint2 { color: var(--muted); font-size: 14px; margin: 0; }
+footer { font-size: 12.5px; color: var(--muted); max-width: 78ch; }
+footer b { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .wire.flow { animation: none; } * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">POH Reader · Systems trainer</div>
+    <h1>PC-12 NGX Electrical</h1>
+    <p class="sub">Work the overhead panel as in the cockpit. Pick a failure, read the CAS, and see on the synoptic which buses lose power and why. Laid out after POH Fig. 7-13-1.</p>
+  </header>
+
+  <div class="scen-wrap"><div class="scen" id="scen" role="group" aria-label="Scenarios"></div></div>
+
+  <div class="ovh-card">
+    <div class="ovh-scroll"><svg id="ovh" viewBox="0 0 600 284" role="group" aria-label="Overhead panel, Electrical Power Management"></svg></div>
+    <div class="ovh-hint"><span id="ovhmsg">Tap the upper or lower half of a switch to move it up or down.</span><span><b>Locking switches</b> (GEN, BAT, AV): tap once to pull, tap again to move.</span></div>
+  </div>
+
+  <div class="main">
+    <div class="col">
+      <div class="dark cas o2"><h2><span>CAS</span><small id="cond">Normal condition</small></h2><ul id="cas"></ul></div>
+      <div class="dark o3">
+        <h2><span>Synoptic · power distribution</span><small>tap a bus</small></h2>
+        <svg id="dia" viewBox="12 22 336 386" role="img" aria-label="Power generation and distribution synoptic"></svg>
+        <div class="legend">
+          <span><i style="background:var(--pw-gen)"></i>Generator</span>
+          <span><i style="background:var(--pw-bat)"></i>Battery</span>
+          <span><i style="background:var(--pw-eps)"></i>EPS battery</span>
+          <span><i style="background:var(--syn-off)"></i>No power</span>
+        </div>
+      </div>
+      <div class="card detail o6" id="detail" aria-live="polite"></div>
+    </div>
+    <div class="col">
+      <div class="dark o4">
+        <h2><span>MFD · ELECTRICAL</span><small>values indicative</small></h2>
+        <div class="elec" id="elec"></div>
+        <div class="ind-note">Layout as the POH status window. Volts and amps are illustrative, not from the POH. A positive battery current means charging.</div>
+      </div>
+      <div class="card what o5" id="what"></div>
+      <div class="card o7">
+        <h2>Failures · instructor panel</h2>
+        <div class="fails" id="fails"></div>
+        <p class="hint">A trip can be cleared with GEN RESET then ON (voltage regulator trip, 7-13-2.6). A failure cannot.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <b>Study aid only.</b> Built from the PC-12/47E Pilot's Operating Handbook (familiarization copy, Report 02406): Section 7-13 Electrical, Fig. 7-13-1 controls, Section 3-15 Electrical System Failures. In flight, engine running. Simplified: start sequence, external power on the ground, optional equipment and individual circuit breakers are not modelled. Always use the official POH/AFM and QRH. The pilot in command is solely responsible for aircraft operation.
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = id => document.getElementById(id);
+
+  // ---------------- Model ----------------
+  // Switch positions as on the overhead. Faults are separate (instructor panel).
+  const BASE = {
+    gen1: "ON", gen2: "ON", bat1: true, bat2: true, av1: true, av2: true, stby: true, cabin: true,
+    ext: false, eps: "ARM", tieCB: true, master: true, guardOpen: false,
+    f1: null, f2: null, battOk: true, gpu: false, engine: true
+  };
+
+  const SCEN = [
+    { id: "normal", label: "Normal", s: {},
+      note: "Both generators online. The bus tie is open, so channel 1 (Gen 1 and the Power Line) and channel 2 (Gen 2 and the Secondary Power Line) run independently. GEN 1, GEN 2, AV 1, AV 2 and CABIN BUS stay ON through power cycles.",
+      refs: "7-13-1, 7-13-5, Fig. 7-13-5" },
+    { id: "prestart", label: "Before engine start", s: { engine: false, gen1: "OFF", gen2: "OFF", av1: false, av2: false, cabin: false, bat1: false, bat2: false, eps: "OFF", stby: true },
+      note: "Cockpit preparation, engine off, only STBY BUS on. The Standby Bus is fed from the Hot Battery Bus and the blue ON light next to the STBY BUS switch comes on: power for preflight planning and ATC without powering the whole aircraft. Continue the power-up sequence: EPS TEST for 5 s then ARM, BAT 1 and BAT 2 ON. The blue ON light goes off as soon as the Avionic 1 Bus is powered (AV 1 BUS on), and in normal operation it stays off.",
+      refs: "7-13-4, 7-13-6" },
+    { id: "trip1", label: "Gen 1 trip", s: { f1: "trip" },
+      note: "Generator 1 trips off-line (voltage regulator trip). Bus tie closes, Gen 2 and both batteries feed both channels, and the Gen 1 Bus, Non-Essential and Cabin buses are shed. Try the procedure: GEN 1 switch RESET, then ON. The generator comes back and the system returns to normal.",
+      refs: "7-13-6, 3-15-12", qrh: "3-15-12 Generator 1 Off: confirm on the MFD ELECTRICAL window, GEN 1 switch RESET then ON. If GEN 1 does not reset: continue at pilot's discretion without the load shed systems and buses." },
+    { id: "gen1", label: "Gen 1 failure", s: { f1: "fail" },
+      note: "Generator 1 fails and does not reset. Gen 2 and both batteries feed both channels through the bus tie. Shed: Gen 1 Bus, Non-Essential and Cabin buses, cabin heater, U/F heater, VCCS, footwarmer and logo lights. Essential and Avionic 1 stay powered, now from Gen 2.",
+      refs: "Fig. 7-13-6, 3-15-12", qrh: "3-15-12 Generator 1 Off: RESET then ON. If GEN 1 does not reset, continue at pilot's discretion without the load shed systems and buses." },
+    { id: "gen2", label: "Gen 2 failure", s: { f2: "fail" },
+      note: "Generator 2 fails. Gen 1 and both batteries feed both channels through the bus tie. Shed: Gen 2 Bus, Non-Essential and Cabin buses, cabin heater, U/F heater and VCCS. Main and Avionic 2 stay powered, now from Gen 1.",
+      refs: "Fig. 7-13-7, 3-15-13" },
+    { id: "dual", label: "Dual gen failure", s: { f1: "fail", f2: "fail" },
+      note: "Both generators off-line with the engine running. The bus tie closes and both batteries feed the Power Line: Essential, Avionic 1, Standby, flaps and LH windshield stay powered. The Gen 1 Bus, prop de-ice and cabin heater are shed. On the Secondary Power Line only landing gear power is kept: Main, Avionic 2, Gen 2, Non-Essential and Cabin buses, U/F heater, RH windshield and VCCS are shed. 3-15-11 also sheds the AOA plate heaters. Two fully charged batteries last about 33 minutes.",
+      refs: "7-13-7, Fig. 7-13-8, 3-15-11", qrh: "3-15-11 Generators: confirm on the MFD, GEN 1 and GEN 2 RESET then ON. If they do not reset: monitor BAT 1 and BAT 2, land as soon as possible, do not fly in icing conditions." },
+    { id: "dualav1", label: "Dual gen + AV 1 off", s: { f1: "fail", f2: "fail", av1: false },
+      note: "Dual generator failure, and the pilot switches AV 1 BUS off to reduce the load further. With the STBY BUS switch on, the Standby Bus moves to the Hot Battery Bus: the blue ON light next to STBY BUS comes on.",
+      refs: "7-13-6, 7-13-7" },
+    { id: "tie", label: "Bus tie CB tripped", s: { f1: "fail", tieCB: false },
+      note: "Gen 1 is off and the BUS TIE breaker is out. The tie cannot close, so Gen 2 cannot reach channel 1: Essential, Avionic 1 and the Power Line loads run on Battery 1 alone. Push the BUS TIE breaker back in (one reset attempt) and Gen 2 takes over channel 1.",
+      refs: "3-15-10, Table 7-13-1", qrh: "3-15-10 Bus Tie, if a generator is off: BUS TIE circuit breaker check if tripped, reset (max 1 attempt only). Land as soon as possible. Caution: buses are being powered only from a battery. Possible battery current caution." },
+    { id: "master", label: "Master power emergency off", s: { master: false },
+      note: "MASTER POWER EMERGENCY OFF (lift the red guard first). Generators, batteries and external power are disconnected from the distribution system and the Standby Bus is de-energized. Only the Hot Battery and Emergency Power buses remain: the EPS battery takes the standby instruments and the red EPS ON light comes on.",
+      refs: "7-13-6" },
+    { id: "total", label: "Total power loss", s: { f1: "fail", f2: "fail", battOk: false },
+      note: "Both generators and both batteries are lost. The Essential Bus goes dead, so the EPS Bus switches to its 24 V, 5 Ah battery and keeps the standby instruments running for about 30 minutes. The red EPS ON light comes on. The MFD has no power, so no CAS is displayed.",
+      refs: "7-13-2, 7-13-4, 7-13-7" }
+  ];
+  SCEN.forEach(p => p.s = Object.assign({}, BASE, p.s));
+
+  const ITEMS = {
+    PL:   { name: "Power Line", ref: "7-13-3", text: "Channel 1, highest integrity. Normally fed by Gen 1 and Battery 1. Supplies the Essential and Avionic 1 buses and the flaps, LH windshield de-ice, propeller de-ice and cabin heating." },
+    SPL:  { name: "Secondary Power Line", ref: "7-13-3", text: "Channel 2. Normally fed by Gen 2 and Battery 2. Supplies the Main, Avionic 2, Non-Essential and Cabin buses and the landing gear, RH windshield de-ice, VCCS and under-floor heating." },
+    ESS:  { name: "Essential Bus", ref: "7-13-3", text: "Highest integrity. Normally from Gen 1; can be fed by either generator or both batteries. No relays or contactors. Powered in normal, abnormal and emergency conditions. CAS warning below 22 V." },
+    AV1:  { name: "Avionic 1 Bus", ref: "7-13-3", text: "Highest integrity, normally from Gen 1. Powered in all three conditions. Contactor on the AV 1 BUS switch (locking type)." },
+    G1B:  { name: "Generator 1 Bus", ref: "7-13-4", text: "Powered only while Gen 1 is online. Non-essential equipment kept after a Gen 2 failure. Its caution is suppressed with Gen 1 off-line. Holds the FLAP breaker (LP4, Fig. 7-13-2)." },
+    STBY: { name: "Standby Power Bus", ref: "7-13-4, 7-13-6", text: "Avionics for preflight planning and ATC without powering the main buses. Fed from Avionic 1; with AV 1 BUS off, from the Hot Battery Bus as long as STBY BUS is on. The blue ON light shows only in that case: it comes on when you switch STBY BUS on before engine start and goes off once the Avionic 1 Bus is powered. De-energized by MASTER POWER EMERGENCY OFF." },
+    EPS:  { name: "EPS Bus", ref: "7-13-2, 7-13-6", text: "Backup equipment. Normally fed from the Essential Bus. If the Essential Bus is lost, it takes the EPS battery (24 V, 5 Ah, about 30 minutes) and the red EPS ON light comes on. Stays energized with MASTER POWER EMERGENCY OFF. With the EPS switch OFF and the Essential Bus powered, the POH does not clearly say whether the EPS bus stays powered: this model shows it powered, but treat that case as not confirmed." },
+    HOT:  { name: "Hot Battery Bus", ref: "7-13-3, 7-13-6", text: "Powered directly from Battery 1. Systems that must stay available with the aircraft powered down, and the Standby Bus when AV 1 is off. Stays energized with MASTER POWER EMERGENCY OFF." },
+    EPSB: { name: "EPS battery", ref: "7-13-2, 7-13-6", text: "24 V, 5 Ah. EPS switch ARMED: powers the EPS bus when the Essential Bus is lost. TEST: capacity test, green TEST light if serviceable. Set OFF when powering down to prevent discharge." },
+    MAIN: { name: "Main Bus", ref: "7-13-4", text: "Second-highest integrity, normally from Gen 2. Contactor opens automatically in the emergency condition (both generators off-line)." },
+    AV2:  { name: "Avionic 2 Bus", ref: "7-13-3", text: "Second-highest integrity. Powered in normal and abnormal conditions, shed in emergency. AV 2 BUS switch (locking type). Caution suppressed with both generators off-line or the switch off." },
+    G2B:  { name: "Generator 2 Bus", ref: "7-13-4", text: "Powered only while Gen 2 is online. Non-essential equipment kept after a Gen 1 failure." },
+    NESS: { name: "Non-Essential Bus", ref: "7-13-4", text: "Fourth-highest integrity. Shed as soon as either generator is off-line." },
+    CAB:  { name: "Cabin Bus", ref: "7-13-4", text: "Cabin services, shed after a single generator failure. Contactor on the CABIN BUS switch." },
+    FLAP: { name: "Flaps (FLAP PWR)", ref: "7-13-3, Fig. 7-13-8, 3-8-02", text: "Power Line load, kept in the emergency condition. 3-8-02 (engine failure, no generators): the flaps can still be moved on battery, but this costs a lot of battery endurance, may prejudice a later flap lowering, and the ADAHRS and APEX displays may fail during gear or flap operation." },
+    LHWS: { name: "LH windshield de-ice", ref: "7-13-3, Fig. 7-13-8", text: "Power Line load. Kept in the emergency condition." },
+    PROP: { name: "Propeller de-ice", ref: "Fig. 7-13-8, 3-15-11", text: "Power Line load. Kept after a single generator failure, shed when both are off-line." },
+    CHTR: { name: "Cabin heater", ref: "Fig. 7-13-6 to 7-13-8", text: "Power Line load. Shed after any generator failure." },
+    GEAR: { name: "Landing gear power", ref: "7-13-8", text: "Secondary Power Line load. The only SPL load kept in the emergency condition." },
+    RHWS: { name: "RH windshield de-ice", ref: "Fig. 7-13-8", text: "Secondary Power Line load. Kept after a single generator failure, shed when both are off-line." },
+    UFH:  { name: "Under-floor heater", ref: "Fig. 7-13-6 to 7-13-8", text: "Secondary Power Line load. Shed after any generator failure." },
+    VCCS: { name: "VCCS compressor", ref: "Fig. 7-13-6 to 7-13-8", text: "Vapor cycle cooling. Shed after any generator failure." },
+    GEN1: { name: "Generator 1", ref: "7-13-1, 7-13-6", text: "28 V, 300 A. Primary source for the Power Line. Switch ON / OFF / RESET, locking type. RESET brings it back after a voltage regulator trip." },
+    GEN2: { name: "Generator 2", ref: "7-13-1, 7-13-6", text: "28 V, 300 A starter-generator. Primary source for the Secondary Power Line." },
+    BAT1: { name: "Battery 1", ref: "7-13-2", text: "Feeds the Power Line through the No.1 battery contactor and the Hot Battery Bus directly. Locking switch." },
+    BAT2: { name: "Battery 2", ref: "7-13-2", text: "Engine start battery. Feeds the Secondary Power Line through the No.2 battery contactor. Locking switch." },
+    TIE:  { name: "Bus tie", ref: "7-13-3, 7-13-5, 3-15-10", text: "Open in normal operation, closes automatically when a generator goes off-line. Opens on its own above 200 A, and with the BUS TIE breaker on the overhead pulled. CAS Bus Tie when in the wrong position for the configuration." }
+  };
+
+  function compute(S) {
+    const m = S.master;
+    const g1 = S.engine && m && S.gen1 === "ON" && !S.f1;
+    const g2 = S.engine && m && S.gen2 === "ON" && !S.f2;
+    const cond = g1 && g2 ? "normal" : (g1 || g2 ? "abnormal" : "emergency");
+    const tieCmd = cond !== "normal";
+    const tieClosed = tieCmd && S.tieCB;
+    const b1 = m && S.bat1 && S.battOk, b2 = m && S.bat2 && S.battOk;
+    let pl = [], spl = [];
+    if (g1) pl.push("GEN 1"); if (b1) pl.push("BAT 1");
+    if (g2) spl.push("GEN 2"); if (b2) spl.push("BAT 2");
+    let plSrc = pl.slice(), splSrc = spl.slice();
+    if (tieClosed) { plSrc = pl.concat(spl.map(x => x + " via tie")); splSrc = spl.concat(pl.map(x => x + " via tie")); }
+    const feed = a => a.some(x => x.startsWith("GEN")) ? "gen" : (a.length ? "bat" : null);
+    const PL = feed(plSrc), SPL = feed(splSrc);
+    const nm = a => { const g = a.filter(x => x.startsWith("GEN")); return g.length ? g[0].replace(" via tie", " · TIE") : (a.length ? "BATTERY" : ""); };
+    const st = {};
+    const set = (id, f, why, src) => st[id] = { f: f || null, why: f ? null : why, src: f ? src : null };
+    const plN = nm(plSrc), splN = nm(splSrc);
+    const notEmerg = cond !== "emergency", normal = cond === "normal";
+    set("PL", PL, "nosource", plN); set("SPL", SPL, "nosource", splN);
+    set("ESS", PL, "nosource", plN);
+    set("AV1", S.av1 && PL, S.av1 ? "nosource" : "switch", plN);
+    set("G1B", g1 && PL, "shed", plN);
+    set("HOT", S.battOk ? "bat" : null, "nosource", "BAT 1");
+    if (st.AV1.f) set("STBY", st.AV1.f, "", "via AV 1");
+    else set("STBY", S.stby && m && S.battOk ? "bat" : null, !m ? "master" : (S.stby ? "nosource" : "switch"), "HOT BAT");
+    if (st.ESS.f) set("EPS", st.ESS.f, "", "via ESS");
+    else set("EPS", S.eps === "ARM" ? "eps" : null, S.eps === "ARM" ? "nosource" : "switch", "EPS BATT");
+    set("EPSB", S.eps !== "OFF" ? (st.ESS.f || "eps") : null, "switch", st.ESS.f ? "CHARGING" : "IN USE");
+    set("MAIN", notEmerg && SPL, notEmerg ? "nosource" : "shed", splN);
+    set("AV2", notEmerg && S.av2 && SPL, !S.av2 ? "switch" : (notEmerg ? "nosource" : "shed"), splN);
+    set("G2B", g2 && SPL, "shed", splN);
+    set("NESS", normal && SPL, normal ? "nosource" : "shed", splN);
+    set("CAB", normal && S.cabin && SPL, !S.cabin ? "switch" : (normal ? "nosource" : "shed"), splN);
+    set("FLAP", PL, "nosource"); set("LHWS", PL, "nosource");
+    set("PROP", notEmerg && PL, notEmerg ? "nosource" : "shed");
+    set("CHTR", normal && PL, normal ? "nosource" : "shed");
+    set("GEAR", SPL, "nosource");
+    set("RHWS", notEmerg && SPL, notEmerg ? "nosource" : "shed");
+    set("UFH", normal && SPL, normal ? "nosource" : "shed");
+    set("VCCS", normal && SPL, normal ? "nosource" : "shed");
+    set("GEN1", g1 ? "gen" : null, "failed", "ONLINE");
+    set("GEN2", g2 ? "gen" : null, "failed", "ONLINE");
+    set("BAT1", b1 ? (PL === "gen" ? "gen" : "bat") : null, "switch", PL === "gen" ? "CHARGE" : "DISCHG");
+    set("BAT2", b2 ? (SPL === "gen" ? "gen" : "bat") : null, "switch", SPL === "gen" ? "CHARGE" : "DISCHG");
+    set("TIE", tieClosed ? (PL || SPL) : null, "open", "CLOSED");
+
+    // CAS (Table 7-13-1; suppression 7-13-3/4)
+    const cas = [];
+    if (S.engine && cond === "emergency") cas.push(["w", "Generators"]);
+    if (!st.ESS.f) cas.push(["w", "Essential Bus"]);
+    if (S.engine && cond === "abnormal") cas.push(["c", g1 ? "Generator 2 Off" : "Generator 1 Off"]);
+    if (tieCmd && !S.tieCB) cas.push(["c", "Bus Tie"]);
+    const av2Supp = cond === "emergency" || !S.av2;
+    const av1Low = !st.AV1.f, av2Low = !st.AV2.f && !av2Supp;
+    if (av1Low && av2Low) cas.push(["c", "Avionics 1+2 Bus"]); else if (av1Low) cas.push(["c", "Avionics 1 Bus"]); else if (av2Low) cas.push(["c", "Avionics 2 Bus"]);
+    if (!st.STBY.f) cas.push(["c", "Standby Bus"]);
+    if (!S.battOk) cas.push(["c", "Battery 1+2"]);
+    else if (!S.bat1 && !S.bat2) cas.push(["c", "Battery 1+2 Off"]); else if (!S.bat1) cas.push(["c", "Battery 1 Off"]); else if (!S.bat2) cas.push(["c", "Battery 2 Off"]);
+    if (tieCmd && !S.tieCB && (b1 || b2) && cond !== "emergency") { /* 3-15-10: possible battery current caution */ }
+
+    // Indicative MFD values (not from the POH)
+    const LOAD = { ESS: 40, AV1: 25, STBY: 5, G1B: 30, FLAP: 0, LHWS: 20, PROP: 30, CHTR: 40, MAIN: 45, AV2: 20, G2B: 30, NESS: 20, CAB: 25, GEAR: 0, RHWS: 20, UFH: 20, VCCS: 50 };
+    const sideOf = { ESS: 1, AV1: 1, G1B: 1, FLAP: 1, LHWS: 1, PROP: 1, CHTR: 1, MAIN: 2, AV2: 2, G2B: 2, NESS: 2, CAB: 2, GEAR: 2, RHWS: 2, UFH: 2, VCCS: 2 };
+    let L1 = 0, L2 = 0;
+    Object.keys(LOAD).forEach(k => { if (st[k] && st[k].f) { if (sideOf[k] === 2) L2 += LOAD[k]; else L1 += LOAD[k]; } });
+    const charge = 6;
+    const meter = { g1: { v: g1 ? 28.2 : 0, a: 0 }, g2: { v: g2 ? 28.1 : 0, a: 0 }, b1: { v: 0, a: 0 }, b2: { v: 0, a: 0 } };
+    const batV = (on, gen) => on ? (gen ? 28.0 : 24.6) : (S.battOk ? 25.4 : 18.0);
+    meter.b1.v = batV(b1, PL === "gen"); meter.b2.v = batV(b2, SPL === "gen");
+    if (tieClosed) {
+      const L = L1 + L2, gens = [g1, g2].filter(Boolean).length;
+      if (gens) { const share = (L + (b1 ? charge : 0) + (b2 ? charge : 0)) / gens; if (g1) meter.g1.a = share; if (g2) meter.g2.a = share; if (b1) meter.b1.a = charge; if (b2) meter.b2.a = charge; }
+      else { const bs = [b1, b2].filter(Boolean).length; if (bs) { if (b1) meter.b1.a = -L / bs; if (b2) meter.b2.a = -L / bs; } }
+    } else {
+      if (g1) { meter.g1.a = L1 + (b1 ? charge : 0); if (b1) meter.b1.a = charge; } else if (b1) meter.b1.a = -L1;
+      if (g2) { meter.g2.a = L2 + (b2 ? charge : 0); if (b2) meter.b2.a = charge; } else if (b2) meter.b2.a = -L2;
+    }
+    return { cond, tieClosed, tieCmd, st, cas, meter, epsOn: st.EPS.f === "eps", stbyOn: S.stby && st.STBY.f && !st.AV1.f };
+  }
+
+  // ---------------- Overhead panel ----------------
+  const ovh = $("ovh");
+  // Switch definitions: positions top -> bottom
+  const SW = {
+    av1:   { x: 78,  y: 86,  pos: ["ON", "OFF"], lock: true,  label: "AV 1 BUS", key: "av1" },
+    stby:  { x: 168, y: 86,  pos: ["ON", "OFF"], label: "STBY BUS", key: "stby" },
+    cabin: { x: 300, y: 86,  pos: ["ON", "OFF"], label: "CABIN BUS", key: "cabin" },
+    av2:   { x: 390, y: 86,  pos: ["ON", "OFF"], lock: true,  label: "AV 2 BUS", key: "av2" },
+    gen1:  { x: 78,  y: 158, pos: ["ON", "OFF", "RESET"], lock: true, label: "GEN 1", key: "gen1" },
+    gen2:  { x: 390, y: 158, pos: ["ON", "OFF", "RESET"], lock: true, label: "GEN 2", key: "gen2" },
+    bat1:  { x: 78,  y: 238, pos: ["ON", "OFF"], lock: true,  label: "BAT 1", key: "bat1" },
+    ext:   { x: 168, y: 238, pos: ["ON", "OFF"], label: "EXT PWR", key: "ext" },
+    bat2:  { x: 390, y: 238, pos: ["ON", "OFF"], lock: true,  label: "BAT 2", key: "bat2" },
+    eps:   { x: 528, y: 222, pos: ["ARM", "OFF", "TEST"], label: "EPS", key: "eps" }
+  };
+  const getPos = (k) => { const d = SW[k]; const v = S[d.key];
+    if (typeof v === "boolean") return v ? 0 : 1; return d.pos.indexOf(v); };
+  const setPos = (k, i) => { const d = SW[k]; const p = d.pos[i];
+    if (d.pos.length === 2 && d.pos[0] === "ON") S[d.key] = (p === "ON"); else S[d.key] = p; };
+
+  function swMarkup(k, d) {
+    const three = d.pos.length === 3;
+    let h = `<g id="sw-${k}" class="sw" data-k="${k}" tabindex="0" role="button" aria-label="${d.label}">`;
+    if (k !== "eps") h += `<text class="o-lab" x="${d.x}" y="${d.y - 26}" text-anchor="middle">${d.label}</text>`;
+    if (three && k !== "eps") h += `<text class="o-pos" x="${d.x}" y="${d.y + 34}" text-anchor="middle">RESET</text>`;
+    if (!three) h += `<text class="o-pos" x="${d.x}" y="${d.y + 32}" text-anchor="middle">OFF</text>`;
+    h += `<circle class="pullring" cx="${d.x}" cy="${d.y}" r="17"/>`;
+    h += `<circle class="base" cx="${d.x}" cy="${d.y}" r="11"/><circle class="nut" cx="${d.x}" cy="${d.y}" r="5.5"/>`;
+    h += `<g class="lv"><rect class="lever" x="${d.x - 3.2}" y="${d.y - 20}" width="6.4" height="20" rx="3"/><circle class="tip" cx="${d.x}" cy="${d.y - 20}" r="5"/></g>`;
+    h += `<rect class="hit" x="${d.x - 24}" y="${d.y - 30}" width="48" height="60"/></g>`;
+    return h;
+  }
+  (function drawOverhead() {
+    let h = `<defs>
+      <linearGradient id="leverGrad" x1="0" x2="1"><stop offset="0" stop-color="#C9D0D6"/><stop offset=".5" stop-color="#FFFFFF"/><stop offset="1" stop-color="#9AA3AB"/></linearGradient>
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>`;
+    const screw = (x, y) => `<g transform="translate(${x} ${y})"><circle class="o-screw" r="6"/><line x1="-4" y1="-4" x2="4" y2="4" stroke="#6B737B" stroke-width="1.4"/></g>`;
+    h += `<rect id="ovhPanel" class="o-panel" x="2" y="2" width="596" height="280" rx="14"/>`;
+    h += `<line id="ovhDiv" class="o-div" x1="456" y1="2" x2="456" y2="282"/>`;
+    h += screw(16, 16) + screw(442, 16) + screw(16, 268) + screw(442, 268);
+    h += `<text class="o-title" x="228" y="24" text-anchor="middle">ELECTRICAL POWER MANAGEMENT</text>`;
+    h += `<path class="o-mimic" d="M 92 86 H 150"/><path class="o-mimic dash" d="M 150 86 H 154"/>`;
+    h += `<path class="o-mimic" d="M 316 86 H 374"/>`;
+    h += `<path class="o-mimic" d="M 122 86 V 238"/><path class="o-mimic" d="M 346 86 V 238"/>`;
+    h += `<path class="o-mimic" d="M 92 158 H 214"/><path class="o-mimic" d="M 238 158 H 376"/>`;
+    h += `<path class="o-mimic dash" d="M 92 238 H 154"/><path class="o-mimic dash" d="M 182 238 H 376"/>`;
+    h += `<text class="o-pos" x="48" y="162" text-anchor="end">OFF</text><text class="o-pos" x="420" y="162">OFF</text>`;
+    h += `<text class="o-lab" x="226" y="134" text-anchor="middle">BUS TIE</text>`;
+    h += `<text id="i-stby" class="ind off" x="196" y="90">ON</text>`;
+    h += `<text id="i-exton" class="ind off" x="196" y="232">ON</text>`;
+    h += `<text id="i-avail" class="ind off" x="196" y="250">AVAIL</text>`;
+    h += `<g id="cb-tie" class="cb" tabindex="0" role="button" aria-label="BUS TIE circuit breaker">
+      <rect class="hit" x="206" y="138" width="40" height="40"/>
+      <circle class="ring" cx="226" cy="158" r="12"/><circle class="collar" cx="226" cy="158" r="9.5"/><circle class="cap" cx="226" cy="158" r="7.5"/>
+      <text class="val" x="226" y="161" text-anchor="middle">½</text></g>`;
+    Object.entries(SW).forEach(([k, d]) => { if (k !== "eps") h += swMarkup(k, d); });
+    // MASTER POWER section
+    h += `<g id="mpSec">` + screw(584, 16) + `<text class="o-title" x="528" y="28" text-anchor="middle">MASTER POWER</text>
+      <g id="mp" class="sw" tabindex="0" role="button" aria-label="Master power emergency off, guarded">
+      <rect class="mp-box" x="478" y="38" width="100" height="84" rx="6"/>
+      <g id="mp-sw"></g>
+      <g transform="translate(500 50)"><rect id="mp-guard" class="mp-guard" x="0" y="0" width="56" height="44" rx="5"/></g>
+      <text class="o-pos" x="528" y="114" text-anchor="middle" style="fill:#FFFFFF">EMERGENCY OFF</text>
+      <rect class="hit" x="478" y="38" width="100" height="84"/></g></g>`;
+    // EPS section
+    h += `<g id="epsSec">` + screw(584, 268) + `<rect class="eps-box" x="474" y="146" width="108" height="122" rx="8"/>
+      <text class="o-title" x="528" y="166" text-anchor="middle">EPS</text>
+      <text id="i-epson" class="ind off" x="528" y="181" text-anchor="middle">EPS ON</text>
+      <text class="o-pos" x="508" y="207" text-anchor="end">ARMED</text><text class="o-pos" x="508" y="225" text-anchor="end">OFF</text><text class="o-pos" x="508" y="243" text-anchor="end">TEST</text>
+      <text id="i-test" class="ind off" x="546" y="258">TEST</text>` + swMarkup("eps", SW.eps) + `</g>`;
+    ovh.innerHTML = h;
+  })();
+  // Phone: EPM on top, MASTER POWER and EPS side by side underneath
+  const narrow = window.matchMedia("(max-width: 600px)");
+  function layoutOverhead() {
+    const n = narrow.matches;
+    ovh.setAttribute("viewBox", n ? "0 0 460 410" : "0 0 600 284");
+    $("ovhPanel").setAttribute("width", n ? 456 : 596); $("ovhPanel").setAttribute("height", n ? 406 : 280);
+    $("ovhDiv").setAttribute("x1", n ? 2 : 456); $("ovhDiv").setAttribute("x2", n ? 458 : 456);
+    $("ovhDiv").setAttribute("y1", n ? 282 : 2); $("ovhDiv").setAttribute("y2", n ? 282 : 282);
+    $("mpSec").setAttribute("transform", n ? "translate(-436 282)" : "");
+    $("epsSec").setAttribute("transform", n ? "translate(-212 132)" : "");
+  }
+  layoutOverhead();
+  narrow.addEventListener ? narrow.addEventListener("change", layoutOverhead) : narrow.addListener(layoutOverhead);
+
+  let pulled = null, pullTimer = 0, epsTestT = 0, resetT = {};
+  function moveSwitch(k, dir) {
+    const d = SW[k]; let i = getPos(k);
+    const ni = Math.max(0, Math.min(d.pos.length - 1, i + dir));
+    if (ni === i) return;
+    // locking switches must be pulled to leave ON
+    if (d.lock && i === 0 && dir > 0 && pulled !== k) {
+      pulled = k; pullTimer = 3; msg(`${d.label}: switch pulled out. Tap again to move it.`); render(); return;
+    }
+    pulled = null;
+    setPos(k, ni);
+    if (d.pos[ni] === "RESET") {
+      const f = k === "gen1" ? "f1" : "f2";
+      if (S[f] === "trip") { S[f] = null; msg(`${d.label} RESET: voltage regulator trip cleared. Select ON.`); }
+      else if (S[f] === "fail") msg(`${d.label} RESET: generator does not reset.`);
+      else msg(`${d.label} RESET.`);
+      resetT[k] = 0.8;
+    } else msg(`${d.label} ${d.pos[ni]}`);
+    if (k === "eps") epsTestT = 0;
+    scenario = null; render();
+  }
+  function msg(t) { $("ovhmsg").textContent = t; }
+
+  ovh.addEventListener("click", e => {
+    const cb = e.target.closest("#cb-tie");
+    if (cb) { S.tieCB = !S.tieCB; msg(S.tieCB ? "BUS TIE breaker pushed in." : "BUS TIE breaker pulled."); scenario = null; render(); return; }
+    const mp = e.target.closest("#mp");
+    if (mp) {
+      if (S.master && !S.guardOpen) { S.guardOpen = true; msg("Guard lifted. Tap again for EMERGENCY OFF."); }
+      else if (S.master) { S.master = false; msg("MASTER POWER: EMERGENCY OFF."); }
+      else { S.master = true; S.guardOpen = false; msg("MASTER POWER back on, guard closed."); }
+      scenario = null; render(); return;
+    }
+    const g = e.target.closest(".sw[data-k]");
+    if (!g) return;
+    const k = g.dataset.k, d = SW[k];
+    const pt = ovh.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+    const loc = pt.matrixTransform(g.getScreenCTM().inverse());
+    moveSwitch(k, loc.y < d.y ? -1 : 1);
+  });
+  ovh.addEventListener("keydown", e => {
+    const g = e.target.closest && e.target.closest(".sw[data-k]");
+    if (g && (e.key === "ArrowUp" || e.key === "ArrowDown")) { e.preventDefault(); moveSwitch(g.dataset.k, e.key === "ArrowUp" ? -1 : 1); }
+    if ((e.key === "Enter" || e.key === " ") && e.target.id === "cb-tie") { e.preventDefault(); e.target.dispatchEvent(new MouseEvent("click", { bubbles: true })); }
+  });
+
+  // ---------------- Synoptic ----------------
+  const svg = $("dia");
+  (function drawSyn() {
+    let h = `<rect class="syn-bg" x="12" y="22" width="336" height="386"/>`;
+    const wire = (id, d) => h += `<path id="w-${id}" class="wire" d="${d}"/>`;
+    const node = (id, x, y, w, ht, label, load) => {
+      const cx = x + w / 2;
+      h += `<g class="node${load ? " load" : ""}" id="n-${id}" data-id="${id}" tabindex="0" role="button" aria-label="${ITEMS[id].name}">
+        <rect class="box" x="${x}" y="${y}" width="${w}" height="${ht}" rx="${load ? 4 : 5}"/>` +
+        (load ? `<text class="ll" x="${cx}" y="${y + ht / 2 + 3.4}" text-anchor="middle">${label}</text>`
+              : `<text class="bl" x="${x + 8}" y="${y + 12}">${label}</text><text class="bs" id="t-${id}" x="${x + 8}" y="${y + 22.5}"></text>`) + `</g>`;
+    };
+    h += `<text class="lab" x="88" y="100" text-anchor="middle">POWER LINE</text><text class="lab" x="272" y="100" text-anchor="middle">SEC POWER LINE</text>`;
+    wire("GEN1", "M50 64 V106"); wire("BAT1", "M125 56 V106"); wire("GEN2", "M310 64 V106"); wire("BAT2", "M235 56 V106");
+    wire("SP1", "M28 114 V271"); wire("SP2", "M332 114 V339");
+    wire("ESS", "M28 140 H40"); wire("AV1", "M28 174 H40"); wire("G1B", "M28 208 H40"); wire("L1", "M28 243 H40"); wire("L2", "M28 271 H40");
+    wire("MAIN", "M332 140 H320"); wire("AV2", "M332 174 H320"); wire("G2B", "M332 208 H320"); wire("NESS", "M332 242 H320"); wire("CAB", "M332 276 H320"); wire("L3", "M332 311 H320"); wire("L4", "M332 339 H320");
+    wire("STBYAV", "M150 174 H156 V314 H150"); wire("EPSESS", "M150 140 H161 V348 H150"); wire("HOTSTBY", "M40 387 H33 V314 H40"); wire("EPSB", "M125 376 V362");
+    h += `<path id="w-TIE" class="wire" d="M165 110 H195"/><circle class="term" cx="165" cy="110" r="2.6"/><circle class="term" cx="195" cy="110" r="2.6"/>`;
+    h += `<g class="node" id="n-TIE" data-id="TIE" tabindex="0" role="button" aria-label="Bus tie"><rect class="hit" x="158" y="84" width="44" height="62"/>
+      <text class="lab" x="180" y="94" text-anchor="middle">BUS TIE</text><text class="bs" id="t-TIE" x="180" y="128" text-anchor="middle"></text><text class="cbout" id="cbout" x="180" y="139" text-anchor="middle"></text></g>`;
+    h += `<rect id="w-PL" class="bar" x="20" y="106" width="145" height="8" rx="4"/><rect id="w-SPL" class="bar" x="195" y="106" width="145" height="8" rx="4"/>`;
+    h += `<g class="node" data-id="PL" id="n-PL" tabindex="0" role="button" aria-label="Power Line"><rect class="hit" x="20" y="102" width="145" height="16"/></g>`;
+    h += `<g class="node" data-id="SPL" id="n-SPL" tabindex="0" role="button" aria-label="Secondary Power Line"><rect class="hit" x="195" y="102" width="145" height="16"/></g>`;
+    const gen = (id, cx, lab) => h += `<g class="node" id="n-${id}" data-id="${id}" tabindex="0" role="button" aria-label="${ITEMS[id].name}"><circle class="box" cx="${cx}" cy="44" r="20"/><text class="src-t" x="${cx}" y="42" text-anchor="middle">${lab}</text><text class="bs" id="t-${id}" x="${cx}" y="52" text-anchor="middle"></text></g>`;
+    const bat = (id, x, lab) => h += `<g class="node" id="n-${id}" data-id="${id}" tabindex="0" role="button" aria-label="${ITEMS[id].name}"><rect class="box" x="${x}" y="30" width="38" height="26" rx="3"/><text class="src-t" x="${x + 19}" y="42" text-anchor="middle">${lab}</text><text class="bs" id="t-${id}" x="${x + 19}" y="51.5" text-anchor="middle" style="font-size:6.4px"></text></g>`;
+    gen("GEN1", 50, "GEN 1"); gen("GEN2", 310, "GEN 2"); bat("BAT1", 106, "BAT 1"); bat("BAT2", 216, "BAT 2");
+    node("ESS", 40, 126, 110, 28, "ESSENTIAL"); node("AV1", 40, 160, 110, 28, "AVIONIC 1"); node("G1B", 40, 194, 110, 28, "GEN 1 BUS");
+    node("FLAP", 40, 232, 53, 22, "FLAPS", 1); node("LHWS", 97, 232, 53, 22, "LH W/S", 1); node("PROP", 40, 260, 53, 22, "PROP DE-ICE", 1); node("CHTR", 97, 260, 53, 22, "CAB HEAT", 1);
+    node("STBY", 40, 300, 110, 28, "STANDBY"); node("EPS", 40, 334, 110, 28, "EPS BUS"); node("HOT", 40, 376, 56, 26, "HOT BAT"); node("EPSB", 100, 376, 50, 26, "EPS BATT");
+    node("MAIN", 210, 126, 110, 28, "MAIN"); node("AV2", 210, 160, 110, 28, "AVIONIC 2"); node("G2B", 210, 194, 110, 28, "GEN 2 BUS"); node("NESS", 210, 228, 110, 28, "NON-ESSENTIAL"); node("CAB", 210, 262, 110, 28, "CABIN");
+    node("GEAR", 210, 300, 53, 22, "LDG GEAR", 1); node("RHWS", 267, 300, 53, 22, "RH W/S", 1); node("UFH", 210, 328, 53, 22, "U/F HEAT", 1); node("VCCS", 267, 328, 53, 22, "VCCS", 1);
+    svg.innerHTML = h;
+    svg.querySelector("#n-PROP .ll").style.fontSize = "8px";
+  })();
+  svg.addEventListener("click", e => { const g = e.target.closest(".node"); if (g) { selected = g.dataset.id; render(); } });
+  svg.addEventListener("keydown", e => { if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("node")) { e.preventDefault(); selected = e.target.dataset.id; render(); } });
+
+  // ---------------- Scenarios / failures ----------------
+  let S = Object.assign({}, BASE), selected = null, scenario = SCEN[0];
+  const normalR = compute(BASE);
+  const scen = $("scen");
+  SCEN.forEach(p => {
+    const b = document.createElement("button"); b.className = "chip"; b.type = "button"; b.id = "sc-" + p.id; b.textContent = p.label;
+    b.addEventListener("click", () => { S = Object.assign({}, p.s); scenario = p; pulled = null; epsTestT = 0; msg("Scenario: " + p.label); render(); });
+    scen.appendChild(b);
+  });
+  const FAILS = [
+    ["f1", "trip", "GEN 1 trip (resettable)"], ["f1", "fail", "GEN 1 failure"],
+    ["f2", "trip", "GEN 2 trip (resettable)"], ["f2", "fail", "GEN 2 failure"],
+    ["battOk", false, "Batteries depleted"], ["clear", null, "Clear all failures"]
+  ];
+  const fails = $("fails");
+  FAILS.forEach(([k, v, lab], i) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "fbtn"; b.id = "fb-" + i; b.textContent = lab;
+    b.addEventListener("click", () => {
+      if (k === "clear") { S.f1 = null; S.f2 = null; S.battOk = true; }
+      else if (k === "battOk") S.battOk = !S.battOk;
+      else S[k] = S[k] === v ? null : v;
+      scenario = null; render();
+    });
+    fails.appendChild(b);
+  });
+
+  // ---------------- Render ----------------
+  const cls = f => "s-" + (f || "off");
+  const WHY = { shed: "SHED", switch: "SWITCHED OFF", nosource: "NO POWER", failed: "OFF-LINE", open: "OPEN", master: "MASTER OFF" };
+  const STATE = { gen: "Generator power", bat: "Battery power", eps: "EPS battery" };
+  const fmtA = a => (a >= 0 ? " " : "-") + Math.abs(Math.round(a));
+
+  function render() {
+    const R = compute(S), st = R.st;
+    // overhead
+    Object.keys(SW).forEach(k => {
+      const d = SW[k], g = $("sw-" + k); const i = getPos(k);
+      const lv = g.querySelector(".lv");
+      if (d.pos.length === 3 && i === 1) lv.setAttribute("transform", `translate(${d.x} ${d.y}) scale(1 0.3) translate(${-d.x} ${-d.y})`);
+      else lv.setAttribute("transform", `rotate(${i === 0 ? 0 : 180} ${d.x} ${d.y})`);
+      g.classList.toggle("pulled", pulled === k);
+      g.setAttribute("aria-label", `${d.label}, ${d.pos[i]}`);
+    });
+    const setInd = (id, on, color) => $(id).setAttribute("class", "ind " + (on ? color : "off"));
+    setInd("i-stby", R.stbyOn, "blue");
+    setInd("i-exton", S.ext && S.gpu && S.master, "blue");
+    setInd("i-avail", S.gpu, "green");
+    setInd("i-epson", R.epsOn, "red");
+    setInd("i-test", S.eps === "TEST" && epsTestT > 1, "green");
+    $("cb-tie").classList.toggle("pulled", !S.tieCB);
+    $("mp-guard").setAttribute("transform", S.guardOpen || !S.master ? "translate(0 -22) scale(1 .35)" : "");
+    $("mp-sw").innerHTML = `<circle cx="528" cy="72" r="11" fill="#15191C" stroke="#F7D6D3" stroke-width="1.2"/><circle cx="528" cy="72" r="5.5" fill="#A9B1B8"/>
+      <g transform="rotate(${S.master ? 0 : 180} 528 72)"><rect x="524.8" y="52" width="6.4" height="20" rx="3" fill="url(#leverGrad)" stroke="#3A4047" stroke-width=".8"/><circle cx="528" cy="52" r="5" fill="#E8EBEE" stroke="#3A4047" stroke-width=".8"/></g>`;
+
+    // synoptic
+    const setW = (id, f, flow) => { const el = $("w-" + id); if (!el) return; el.setAttribute("class", (el.tagName === "rect" ? "bar " : "wire ") + cls(f) + (f && flow ? " flow" : "")); };
+    setW("PL", st.PL.f); setW("SPL", st.SPL.f); setW("SP1", st.PL.f, 1); setW("SP2", st.SPL.f, 1);
+    setW("GEN1", st.GEN1.f, 1); setW("GEN2", st.GEN2.f, 1);
+    setW("BAT1", st.BAT1.f ? (st.BAT1.f === "gen" ? "gen" : "bat") : null, 1); setW("BAT2", st.BAT2.f ? (st.BAT2.f === "gen" ? "gen" : "bat") : null, 1);
+    ["ESS", "AV1", "G1B", "MAIN", "AV2", "G2B", "NESS", "CAB"].forEach(id => setW(id, st[id].f, 1));
+    setW("L1", st.PL.f, 1); setW("L2", st.PL.f, 1); setW("L3", st.SPL.f, 1); setW("L4", st.SPL.f, 1);
+    setW("STBYAV", st.STBY.src === "via AV 1" ? st.STBY.f : null, 1);
+    setW("HOTSTBY", st.STBY.src === "HOT BAT" && st.STBY.f ? "bat" : null, 1);
+    setW("EPSESS", st.EPS.src === "via ESS" ? st.EPS.f : null, 1);
+    setW("EPSB", st.EPS.f === "eps" ? "eps" : null, 1);
+    setW("TIE", R.tieClosed ? (st.PL.f || st.SPL.f) : null, 1);
+    $("w-TIE").setAttribute("d", R.tieClosed ? "M165 110 H195" : "M165 110 L191 97");
+    $("cbout").textContent = S.tieCB ? "" : "CB PULLED";
+    Object.keys(st).forEach(id => {
+      const g = $("n-" + id); if (!g) return;
+      if (id === "TIE" || id === "PL" || id === "SPL") { g.setAttribute("class", "node" + (selected === id ? " sel" : "")); }
+      else g.setAttribute("class", "node " + cls(st[id].f) + (g.querySelector(".ll") ? " load" : "") + (selected === id ? " sel" : ""));
+      const t = $("t-" + id);
+      if (t) {
+        let txt;
+        if (id === "GEN1" || id === "GEN2") txt = st[id].f ? "ONLINE" : ((id === "GEN1" ? S.f1 : S.f2) === "trip" ? "TRIPPED" : (id === "GEN1" ? S.f1 : S.f2) ? "FAILED" : "OFF");
+        else if (id === "BAT1" || id === "BAT2") txt = st[id].f ? st[id].src : (S.battOk ? "OFF" : "FLAT");
+        else if (id === "TIE") txt = R.tieClosed ? "CLOSED" : "OPEN";
+        else txt = st[id].f ? (st[id].src || STATE[st[id].f]) : (WHY[st[id].why] || "NO POWER");
+        t.textContent = txt;
+      }
+    });
+
+    // CAS
+    const mfdDead = !st.ESS.f && !st.SPL.f;
+    const lowerOnly = mfdDead && st.STBY.f;
+    $("cas").innerHTML = lowerOnly ? `<li class="n">Only the lower MFD is on (Standby Bus) · preflight, no CAS shown here</li>` : mfdDead ? `<li class="n">MFD unpowered · no CAS · standby instruments on EPS</li>` : (R.cas.length ? R.cas.map(([t, m]) => `<li class="${t}">${m}</li>`).join("") : `<li class="n">No electrical messages</li>`);
+    $("cond").textContent = { normal: "Normal condition", abnormal: "Abnormal condition", emergency: "Emergency condition" }[R.cond];
+
+    // MFD electrical window
+    const M = R.meter;
+    const cell = (t, m) => `<div><div class="t">${t}</div><div class="v${m.v < 22 ? " lo" : ""}">${mfdDead ? "--.-" : m.v.toFixed(1)}<small>V</small></div><div class="v">${mfdDead ? " --" : fmtA(m.a)}<small>A</small></div></div>`;
+    $("elec").innerHTML = cell("GEN1", M.g1) + cell("GEN2", M.g2) + cell("BAT1", M.b1) + cell("BAT2", M.b2);
+
+    // scenario chips
+    SCEN.forEach(p => $("sc-" + p.id).setAttribute("aria-pressed", String(scenario === p)));
+    FAILS.forEach(([k, v], i) => { const on = k === "battOk" ? !S.battOk : (k !== "clear" && S[k] === v); $("fb-" + i).setAttribute("aria-pressed", String(on)); });
+
+    // what happened
+    const lost = [], batt = [], tie = [];
+    ["ESS", "AV1", "STBY", "EPS", "G1B", "MAIN", "AV2", "G2B", "NESS", "CAB", "FLAP", "LHWS", "PROP", "CHTR", "GEAR", "RHWS", "UFH", "VCCS"].forEach(id => {
+      const a = normalR.st[id].f, b = st[id].f;
+      if (a && !b) lost.push(ITEMS[id].name + (st[id].why === "switch" ? " (switched off)" : ""));
+      else if (b === "bat" || b === "eps") batt.push(ITEMS[id].name + (b === "eps" ? " (EPS battery)" : ""));
+      else if (b === "gen" && st[id].src && st[id].src.includes("TIE")) tie.push(ITEMS[id].name);
+    });
+    let w = `<h2>What happened</h2>`;
+    w += scenario ? `<p>${scenario.note}</p>` : `<p>Your own configuration. ${$("cond").textContent}.</p>`;
+    w += `<dl class="diff">`;
+    if (lost.length) w += `<dt>Lost</dt><dd>${lost.join(", ")}</dd>`;
+    if (batt.length) w += `<dt>On battery</dt><dd>${batt.join(", ")}</dd>`;
+    if (tie.length) w += `<dt>Via bus tie</dt><dd>${tie.join(", ")}</dd>`;
+    if (!lost.length && !batt.length && !tie.length) w += `<dt>Changes</dt><dd>None compared with normal operation</dd>`;
+    w += `</dl>`;
+    if (scenario && scenario.qrh) w += `<div class="qrh"><b>QRH</b> · ${scenario.qrh}</div>`;
+    if (scenario) w += `<div class="refs">POH reference: <b>${scenario.refs}</b></div>`;
+    $("what").innerHTML = w;
+
+    // detail
+    const det = $("detail");
+    if (!selected) det.innerHTML = `<h2>Details</h2><p class="hint2">Tap a bus, a load, a generator, a battery or the bus tie on the synoptic to see what feeds it, why it is in its current state, and where the POH describes it.</p>`;
+    else {
+      const it = ITEMS[selected], x = st[selected];
+      const pill = selected === "TIE" ? (R.tieClosed ? "CLOSED" : "OPEN") + (S.tieCB ? "" : " · CB PULLED") : (x.f ? STATE[x.f] + (x.src ? " · " + x.src : "") : (WHY[x.why] || "NO POWER"));
+      let why = "";
+      if (!x.f && x.why === "shed") why = `<p><b>Why it's off:</b> automatic load shedding in the ${R.cond} condition.</p>`;
+      if (!x.f && x.why === "switch") why = `<p><b>Why it's off:</b> switched off on the overhead panel.</p>`;
+      if (!x.f && x.why === "master") why = `<p><b>Why it's off:</b> MASTER POWER EMERGENCY OFF.</p>`;
+      if (!x.f && x.why === "nosource") why = `<p><b>Why it's off:</b> no generator or battery can reach it in this configuration.</p>`;
+      det.innerHTML = `<h2>Details</h2><h3>${it.name}</h3><span class="pill">${pill}</span><p>${it.text}</p>${why}<div class="refs">POH reference: <b>${it.ref}</b></div>`;
+    }
+  }
+
+  // timers: pulled switch, EPS test, GEN reset spring-back
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min(0.2, (now - last) / 1000); last = now; let dirty = false;
+    if (pulled) { pullTimer -= dt; if (pullTimer <= 0) { pulled = null; dirty = true; } }
+    if (S.eps === "TEST") { const before = epsTestT > 1; epsTestT += dt; if (!before && epsTestT > 1) dirty = true; }
+    Object.keys(resetT).forEach(k => { resetT[k] -= dt; if (resetT[k] <= 0) { delete resetT[k]; if (S[k] === "RESET") { S[k] = "OFF"; dirty = true; } } });
+    if (dirty) render();
+    requestAnimationFrame(tick);
+  }
+  render();
+  requestAnimationFrame(t => { last = t; requestAnimationFrame(tick); });
+})();
+</script>
