@@ -246,8 +246,8 @@ footer b { color: var(--ink); }
     { id: "normal", label: "Normal", s: {},
       note: "Both generators online. The bus tie is open, so channel 1 (Gen 1 and the Power Line) and channel 2 (Gen 2 and the Secondary Power Line) run independently. GEN 1, GEN 2, AV 1, AV 2 and CABIN BUS stay ON through power cycles.",
       refs: "7-13-1, 7-13-5, Fig. 7-13-5" },
-    { id: "prestart", label: "Before engine start", s: { engine: false, gen1: "OFF", gen2: "OFF", av1: false, av2: false, cabin: false, bat1: false, bat2: false, eps: "OFF", stby: true },
-      note: "Cockpit preparation, engine off, only STBY BUS on. The Standby Bus is fed from the Hot Battery Bus and the blue ON light next to the STBY BUS switch comes on: power for preflight planning and ATC without powering the whole aircraft. Continue the power-up sequence: EPS TEST for 5 s then ARM, BAT 1 and BAT 2 ON. The blue ON light goes off as soon as the Avionic 1 Bus is powered (AV 1 BUS on), and in normal operation it stays off.",
+    { id: "prestart", label: "Before engine start", s: { engine: false, gen1: "ON", gen2: "ON", av1: true, av2: true, cabin: true, bat1: false, bat2: false, eps: "OFF", stby: true },
+      note: "Cockpit preparation, engine off. GEN 1, GEN 2, AV 1 BUS, AV 2 BUS and CABIN BUS are already ON from the last shutdown; BAT 1, BAT 2 and EPS are OFF. Switching STBY BUS on feeds the Standby Bus from the Hot Battery Bus: the blue ON light next to the switch comes on and the lower MFD powers up for preflight planning. Then continue the power-up sequence: EPS TEST for 5 s, then ARMED, BAT 1 and BAT 2 ON. As soon as the Avionic 1 Bus is powered from the batteries, the blue ON light goes off. The generators come online only after engine start.",
       refs: "7-13-4, 7-13-6" },
     { id: "trip1", label: "Gen 1 trip", s: { f1: "trip" },
       note: "Generator 1 trips off-line (voltage regulator trip). Bus tie closes, Gen 2 and both batteries feed both channels, and the Gen 1 Bus, Non-Essential and Cabin buses are shed. Try the procedure: GEN 1 switch RESET, then ON. The generator comes back and the system returns to normal.",
@@ -646,7 +646,7 @@ footer b { color: var(--ink); }
     const mfdDead = !st.ESS.f && !st.SPL.f;
     const lowerOnly = mfdDead && st.STBY.f;
     $("cas").innerHTML = lowerOnly ? `<li class="n">Only the lower MFD is on (Standby Bus) · preflight, no CAS shown here</li>` : mfdDead ? `<li class="n">MFD unpowered · no CAS · standby instruments on EPS</li>` : (R.cas.length ? R.cas.map(([t, m]) => `<li class="${t}">${m}</li>`).join("") : `<li class="n">No electrical messages</li>`);
-    $("cond").textContent = { normal: "Normal condition", abnormal: "Abnormal condition", emergency: "Emergency condition" }[R.cond];
+    $("cond").textContent = !S.engine ? "Engine off" : { normal: "Normal condition", abnormal: "Abnormal condition", emergency: "Emergency condition" }[R.cond];
 
     // MFD electrical window
     const M = R.meter;
